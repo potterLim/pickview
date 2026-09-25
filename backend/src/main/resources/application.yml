@@ -1,0 +1,28 @@
+server:
+  port: ${PORT:8080}
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/pickview}
+    username: ${DATABASE_USER:pickview}
+    password: ${DATABASE_PASSWORD:pickview-local}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 105MB
+pickview:
+  seed: ${DEMO_SEED:true}
+  demo-password: ${DEMO_PASSWORD:PickView-demo-2026!}
+  cors-origins: ${CORS_ORIGINS:http://localhost:8081,http://localhost:19006}
+  storage:
+    mode: ${STORAGE_MODE:local}
+    path: ${MEDIA_PATH:.local/media}
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    access-key: ${S3_ACCESS_KEY:pickview-local}
+    secret-key: ${S3_SECRET_KEY:pickview-local-secret}
+    bucket: pickview
+  ffmpeg: ${FFMPEG_PATH:ffmpeg}
+  ffprobe: ${FFPROBE_PATH:ffprobe}
