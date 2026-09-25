@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "PickView",
+    "slug": "pickview-demo",
+    "scheme": "pickview",
+    "version": "0.1.0",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.pickview.demo" },
+    "android": { "package": "com.pickview.demo" },
+    "web": { "bundler": "metro", "name": "PickView" },
+    "plugins": ["expo-video", "expo-document-picker"]
+  }
+}
