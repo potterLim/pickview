@@ -1,0 +1,12 @@
+node_modules/
+.expo/
+dist/
+target/
+.env
+.env.*
+!.env.example
+.local/
+*.log
+.idea/workspace.xml
+.idea/shelf/
+.DS_Store
