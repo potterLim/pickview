@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="PickView API" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="pickview-api" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.pickview.PickViewApplication" />
+    <option name="ACTIVE_PROFILES" value="local" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/backend" />
+    <method v="2"><option name="Make" enabled="true" /></method>
+  </configuration>
+</component>
