@@ -30,7 +30,7 @@ $env:FFPROBE_PATH='C:/tools/ffprobe.exe'
 ./scripts/start-api.ps1 -Maven 'C:/tools/apache-maven/bin/mvn.cmd'
 ```
 
-`-SkipBuild`는 이미 빌드된 JAR를 실행합니다. 샘플 영상은 `scripts/prepare-media.mjs`가 생성한 30초 테스트 패턴과 별도 6초 미리보기입니다. 썸네일의 교육·투자·코미디 강의 본편이 아닙니다. 데이터는 `backend/.local/`에 남으므로 재시작해도 계정과 구매 내역이 유지됩니다.
+`-SkipBuild`는 이미 빌드된 JAR를 실행합니다. 샘플 영상은 사진·모션 그래픽·직접 생성한 배경음으로 구성한 48초 오리지널 영상 6편과 별도 9초 미리보기입니다. `scripts/prepare-media.mjs`가 번들 영상을 로컬 저장소에 복사합니다. 실제 촬영 강의가 아닌 데모용 콘텐츠이며, 기존 구매 권한과 사용자 업로드는 보존됩니다. 데이터는 `backend/.local/`에 남으므로 재시작해도 계정과 구매 내역이 유지됩니다.
 
 ## 데모 계정
 
@@ -68,7 +68,7 @@ $env:FFPROBE_PATH='C:/tools/ffprobe.exe'
 
 `compose.yml`에 PostgreSQL과 MinIO가 정의되어 있습니다. Docker가 있는 환경에서 `docker compose up -d` 후 `local` 프로필 없이 서버를 실행하면 PostgreSQL을 사용합니다. 환경변수는 `backend/src/main/resources/application.yml`에 정의되어 있습니다.
 
-`STORAGE_MODE=s3`로 설정하면 영상·썸네일 업로드가 MinIO의 비공개 버킷에 저장됩니다. 기본값은 비공개 로컬 저장소입니다. S3 모드에서 기본 샘플 영상을 사용하려면 생성한 `demo.mp4`, `demo-preview.mp4`를 `pickview` 버킷에 같은 이름으로 업로드하거나 판매자 화면에서 실제 샘플 영상을 새로 등록합니다. 기존 로컬 업로드가 자동으로 S3로 이동하지는 않습니다.
+`STORAGE_MODE=s3`로 설정하면 영상·썸네일 업로드가 MinIO의 비공개 버킷에 저장됩니다. 기본값은 비공개 로컬 저장소입니다. S3 모드에서 기본 샘플 영상을 사용하려면 `content/media/`의 `sample-video-*.mp4` 12개 파일을 `pickview` 버킷에 같은 이름으로 업로드하거나 판매자 화면에서 실제 샘플 영상을 새로 등록합니다. 기존 로컬 업로드가 자동으로 S3로 이동하지는 않습니다.
 
 실행한 검증은 H2/로컬 저장소를 사용했습니다. PostgreSQL/MinIO 런타임 검증은 아직 수행하지 않았습니다. 이 구분과 배포 전 남은 작업은 [검증 기록](docs/verification.md)에 기재했습니다.
 
