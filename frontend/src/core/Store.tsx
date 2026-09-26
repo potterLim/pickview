@@ -16,6 +16,8 @@ interface IStore {
     notify: (message: string) => void;
     toggle: (kind: string, targetId: string) => Promise<void>;
     hasActivity: (kind: string, targetId: string) => boolean;
+    addToCart: (productId: string, openCart?: boolean) => Promise<void>;
+    rememberProgress: (productId: string, seconds: number) => void;
 }
 const Store = createContext<IStore | null>(null);
 
@@ -31,6 +33,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState("");
     const refreshController = useRef<AbortController | null>(null);
+    const intendedRoute = useRef<Route | null>(null);
+    const pendingActivity = useRef<{ kind: string; targetId: string } | null>(null);
     const t = (ko: string, en: string) => language === "ko" ? ko : en;
 
     const refresh = useCallback(async () => {
@@ -77,12 +81,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     function navigate(next: Route, product?: IProduct) {
         if (product) { setSelected(product); }
         const isPublic = ["discover", "detail", "seller", "login"].includes(next);
+        if (!token && !isPublic) { intendedRoute.current = next; }
         setRoute(!token && !isPublic ? "login" : next);
     }
     async function signIn(next: string) {
         refreshController.current?.abort();
+        if (pendingActivity.current) {
+            await request("/activity", next, "PUT", { ...pendingActivity.current, content: "", numberValue: 0 });
+            pendingActivity.current = null;
+        }
         await AsyncStorage.setItem("pickview.token", next);
-        setUser(null); setActivity([]); setLibrary([]); setMessage(""); setToken(next); setRoute("discover");
+        setUser(null); setActivity([]); setLibrary([]); setMessage(""); setToken(next);
+        setRoute(intendedRoute.current ?? "discover"); intendedRoute.current = null;
     }
     async function signOut() {
         refreshController.current?.abort();
@@ -100,13 +110,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     function hasActivity(kind: string, targetId: string) { return activity.some(item => item.kind === kind && item.targetId === targetId); }
     async function toggle(kind: string, targetId: string) {
-        if (!token) { setRoute("login"); return; }
+        if (!token) { intendedRoute.current = route; pendingActivity.current = { kind, targetId }; setRoute("login"); return; }
         if (hasActivity(kind, targetId)) { await request(`/activity/${kind}/${targetId}`, token, "DELETE"); }
         else { await request("/activity", token, "PUT", { kind, targetId, content: "", numberValue: 0 }); }
         await refresh();
     }
+    async function addToCart(productId: string, openCart = false) {
+        if (!token) {
+            pendingActivity.current = { kind: "CART", targetId: productId };
+            intendedRoute.current = openCart ? "cart" : "detail";
+            setRoute("login"); return;
+        }
+        if (!hasActivity("CART", productId)) { await request("/activity", token, "PUT", { kind: "CART", targetId: productId, content: "", numberValue: 0 }); }
+        await refresh();
+        if (openCart) { setRoute("cart"); }
+        else { setMessage(t("장바구니에 담았어요. 원하는 때에 결제하세요.", "Added to your cart. Ready when you are.")); }
+    }
+    function rememberProgress(productId: string, seconds: number) {
+        setActivity(previous => [...previous.filter(item => !(item.kind === "PROGRESS" && item.targetId === productId)),
+            { id: `progress-${productId}`, targetId: productId, kind: "PROGRESS", content: "", numberValue: seconds, author: "" }]);
+    }
     const value: IStore = { token, user, language, route, products, activity, library, selected, busy, message, t,
-        navigate, setLanguage: setLanguageState, refresh, signIn, signOut, run, notify: setMessage, toggle, hasActivity };
+        navigate, setLanguage: setLanguageState, refresh, signIn, signOut, run, notify: setMessage, toggle, hasActivity, addToCart, rememberProgress };
     return <Store.Provider value={value}>{children}</Store.Provider>;
 }
 

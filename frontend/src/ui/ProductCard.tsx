@@ -1,42 +1,50 @@
+import { useState } from "react";
 import { Image, Pressable, Text, View, type ImageSourcePropType } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { IProduct } from "../core/types";
 import { useStore } from "../core/Store";
-import { colors, money, styles } from "./theme";
 import { API_URL } from "../core/api";
+import { categoryLabel, durationLabel, productTitle } from "../core/presentation";
+import { colors, money, styles } from "./theme";
 
 export const thumbnails: Record<string, ImageSourcePropType> = {
-    studio: require("../../assets/studio.png"),
-    pottery: require("../../assets/pottery.png"),
+    studio: require("../../assets/studio.png"), pottery: require("../../assets/pottery.png"),
+    finance: require("../../assets/finance.png"), comedy: require("../../assets/comedy.png"),
 };
 
-export function ProductCard({ product, width }: { product: IProduct; width: number | `${number}%` }) {
-    const { navigate, t, language } = useStore();
-    const title = language === "en" && /^video-[1-6]$/.test(product.id) ? product.description.split("\n")[0] : product.title;
-    const duration = `${Math.floor(product.durationSeconds / 60).toString().padStart(2, "0")}:${Math.floor(product.durationSeconds % 60).toString().padStart(2, "0")}`;
-    const thumbnail = thumbnails[product.thumbnail] ?? (/^[a-f0-9-]{36}$/.test(product.thumbnail)
-        ? { uri: `${API_URL}/api/public/thumbnails/${product.id}?v=${product.thumbnail}` } : null);
-    return <Pressable accessibilityRole="button" accessibilityLabel={product.title} onPress={() => navigate("detail", product)}
-        style={({ pressed }) => ({ width, gap: 10, opacity: pressed ? .85 : 1 })}>
-        <View style={{ aspectRatio: 16 / 9, borderRadius: 12, overflow: "hidden", backgroundColor: colors.pale }}>
-            {thumbnail ? <Image source={thumbnail} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
-                : <View style={{ flex: 1, backgroundColor: product.category === "FINANCE" ? "#E4EBDE" : "#2A2335", padding: 25, justifyContent: "center" }}>
-                    <Text style={{ fontSize: 29, lineHeight: 38, fontWeight: "800", color: product.category === "FINANCE" ? "#314A2B" : "#F1CF9D" }}>
-                        {product.category === "FINANCE" ? "Small steps.\nBig changes." : "A little laugh.\nA better day."}</Text>
-                </View>}
-            <View style={{ position: "absolute", alignSelf: "center", top: "38%", backgroundColor: "#20202A99", borderRadius: 24, padding: 11 }}>
-                <Ionicons name={product.kind === "BUNDLE" ? "layers" : "play"} size={22} color="white" />
+export function ProductArtwork({ product, showPlay = false, showDuration = true }: { product: IProduct; showPlay?: boolean; showDuration?: boolean }) {
+    const { t } = useStore();
+    const source = thumbnails[product.thumbnail] ?? (/^[a-f0-9-]{36}$/.test(product.thumbnail)
+        ? { uri: `${API_URL}/api/public/thumbnails/${product.id}?v=${product.thumbnail}` } : thumbnails.studio);
+    return <View style={{ width: "100%", aspectRatio: 16 / 9, borderRadius: 14, overflow: "hidden", backgroundColor: colors.pale }}>
+        <Image source={source} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+        {showPlay ? <View style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0, alignItems: "center", justifyContent: "center" }}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: "#FFFFFFF2", alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name={product.kind === "BUNDLE" ? "layers" : "play"} size={27} color={colors.ink} style={{ marginLeft: product.kind === "BUNDLE" ? 0 : 4 }} />
             </View>
-            <Text style={{ position: "absolute", right: 8, bottom: 8, backgroundColor: "#20202ACC", color: "white", padding: 5, fontSize: 11, borderRadius: 5 }}>
-                {product.kind === "BUNDLE" ? `${product.videoIds.length} ${t("편", "videos")}` : duration}
-            </Text>
-        </View>
+        </View> : null}
+        {showDuration ? <Text style={{ position: "absolute", right: 10, bottom: 10, backgroundColor: "#20202ACC", color: "white", paddingHorizontal: 7, paddingVertical: 4, fontSize: 11, fontWeight: "600", borderRadius: 5 }}>
+            {product.kind === "BUNDLE" ? `${product.videoIds.length} ${t("편", "videos")}` : durationLabel(product.durationSeconds)}
+        </Text> : null}
+    </View>;
+}
+
+export function ProductCard({ product, width }: { product: IProduct; width: number | `${number}%` }) {
+    const { navigate, t, language, library } = useStore();
+    const [highlighted, setHighlighted] = useState(false);
+    const owned = library.some(item => item.product.id === product.id && item.active);
+    return <Pressable accessibilityRole="button" accessibilityLabel={product.title} onPress={() => navigate("detail", product)}
+        onHoverIn={() => setHighlighted(true)} onHoverOut={() => setHighlighted(false)} onFocus={() => setHighlighted(true)} onBlur={() => setHighlighted(false)}
+        style={({ pressed }) => ({ width, gap: 10, opacity: pressed ? .85 : 1, transform: [{ translateY: highlighted ? -3 : 0 }] })}>
+        <ProductArtwork product={product} />
+        <View style={styles.between}><Text style={[styles.muted, { fontSize: 12 }]}>{categoryLabel(product.category, language)}</Text>
+            {owned ? <Text style={{ fontSize: 11, color: colors.violet, fontWeight: "700" }}>✓ {t("내 라이브러리", "In your library")}</Text> : null}</View>
+        <Text numberOfLines={2} style={{ fontSize: 17, fontWeight: "700", color: highlighted ? colors.violet : colors.ink, lineHeight: 26, letterSpacing: -.35 }}>{productTitle(product, language)}</Text>
         <Text style={styles.muted}>{product.sellerName}</Text>
-        <Text numberOfLines={2} style={{ fontSize: 16, fontWeight: "600", color: colors.ink, lineHeight: 24 }}>{title}</Text>
         <View style={styles.between}>
-            <Text style={styles.muted}>{product.reviewCount ? `★ ${product.rating.toFixed(1)} (${product.reviewCount})` : t("새로운 영상", "New arrival")}</Text>
-            <Text style={styles.muted}>{product.termDays ? `${product.termDays}${t("일 시청", " days")}` : t("기간 제한 없음", "Unlimited")}</Text>
+            <Text style={[styles.price, { fontSize: 19 }]}>{product.priceWon ? money(product.priceWon) : t("무료로 만나보기", "Watch for free")}</Text>
+            <Text style={[styles.muted, { fontSize: 12 }]}>{product.termDays ? `${product.termDays}${t("일 시청", " days")}` : t("기간 제한 없음", "Unlimited")}</Text>
         </View>
-        <Text style={styles.price}>{product.priceWon ? money(product.priceWon) : t("무료", "Free")}</Text>
+        {product.reviewCount > 0 ? <Text style={styles.muted}>★ {product.rating.toFixed(1)} · {t("후기", "Reviews")} {product.reviewCount}</Text> : null}
     </Pressable>;
 }

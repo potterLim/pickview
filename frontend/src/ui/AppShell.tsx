@@ -19,7 +19,7 @@ const navigation: { route: Route; ko: string; en: string; icon: ComponentProps<t
 
 export function AppShell({ children }: { children: ReactNode }) {
     const { width } = useWindowDimensions();
-    const { t, route, navigate, language, setLanguage, user, activity, message, busy, products } = useStore();
+    const { t, route, navigate, language, setLanguage, user, activity, message, busy, products, selected, notify } = useStore();
     const mobile = width < 850;
     const cartCount = activity.filter(item => item.kind === "CART").length;
     useEffect(() => {
@@ -46,9 +46,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                         : <Button label={user ? t("내 계정", "Account") : t("로그인", "Sign in")} onPress={() => navigate(user ? "settings" : "login")} />}
                 </View>
             </View>
-            {message ? <Pressable onPress={() => {}} accessibilityRole="alert" style={{ backgroundColor: colors.pale, padding: 14 }}><Text style={styles.text}>{message}</Text></Pressable> : null}
-            {busy ? <View style={{ height: 3, backgroundColor: colors.violet }} /> : null}
-            <ScrollView key={route} contentContainerStyle={{ padding: mobile ? 18 : 38, paddingBottom: mobile ? 100 : 40, maxWidth: 1600, width: "100%", alignSelf: "center" }}>{children}</ScrollView>
+            {message ? <View accessibilityRole="alert" style={{ backgroundColor: colors.pale, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}><Text style={[styles.text, { flex: 1 }]}>{message}</Text><Pressable accessibilityRole="button" accessibilityLabel={t("알림 닫기", "Dismiss notification")} onPress={() => notify("")} style={{ padding: 8 }}><Ionicons name="close" size={22} color={colors.violet} /></Pressable></View> : null}
+            <View style={{ height: 3, backgroundColor: busy ? colors.violet : "transparent" }} />
+            <ScrollView key={`${route}:${route === "detail" || route === "seller" ? selected?.id : ""}`} contentContainerStyle={{ padding: mobile ? 18 : 38, paddingBottom: mobile ? 100 : 40, maxWidth: 1600, width: "100%", alignSelf: "center" }}>{children}</ScrollView>
             {mobile ? <View style={{ borderTopWidth: 1, borderColor: colors.line, backgroundColor: "white", flexDirection: "row", justifyContent: "space-around", paddingTop: 8, paddingBottom: 12 }}>
                 {navigation.filter(item => ["discover", "library", "studio", "inbox", "settings"].includes(item.route)).map(item => <NavItem key={item.route} item={item} compact />)}
             </View> : null}

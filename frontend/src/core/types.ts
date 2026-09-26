@@ -6,7 +6,7 @@ export interface IProduct {
     id: string; sellerId: string; sellerName: string; title: string; description: string;
     category: string; priceWon: number; termDays: number; status: string; thumbnail: string;
     durationSeconds: number; kind: string; videoIds: string[]; rating: number; reviewCount: number;
-    sales: number; createdAt: number; blocked: boolean; tags: string;
+    sales: number; createdAt: number; blocked: boolean; tags: string; isDemo: boolean;
 }
 export interface IActivity { id: string; targetId: string; kind: string; content: string; numberValue: number; author: string }
 export interface ILibraryItem { id: string; product: IProduct; expiresAt: number; active: boolean }
