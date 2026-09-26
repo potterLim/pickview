@@ -22,12 +22,12 @@ public class OperationsController {
     }
 
     @GetMapping("/api/admin/dashboard")
-    public Map<String, Object> getDashboard(Principal principal) {
+    public OperationsService.DashboardView getDashboard(Principal principal) {
         return mOperations.getDashboard(mAccounts.requireAccount(principal.getName()));
     }
 
     @GetMapping("/api/seller/settlements")
-    public Map<String, Object> getSellerSettlements(Principal principal) {
+    public OperationsService.SellerSettlementView getSellerSettlements(Principal principal) {
         return mOperations.getSellerSettlementSummary(principal.getName());
     }
 

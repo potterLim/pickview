@@ -19,6 +19,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 public class SecurityConfiguration {
 
+    private final String mCorsOrigins;
+
+    public SecurityConfiguration(@Value("${pickview.cors-origins}") String corsOrigins) {
+        mCorsOrigins = corsOrigins;
+    }
+
     @Bean
     public PasswordEncoder createPasswordEncoder() {
         return new BCryptPasswordEncoder();
@@ -57,9 +63,6 @@ public class SecurityConfiguration {
             .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
             .build();
     }
-
-    @Value("${pickview.cors-origins}")
-    private String mCorsOrigins;
 
     @Bean
     public CorsConfigurationSource createCorsConfiguration() {

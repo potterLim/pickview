@@ -28,7 +28,6 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,77 +82,28 @@ public class OperationsService {
         mClock = clock;
     }
 
-    public Map<String, Object> getDashboard(Account operator) {
+    public DashboardView getDashboard(Account operator) {
         requireRole(operator, "CONTENT", "SUPPORT", "FINANCE");
-        boolean content = hasRole(operator, "CONTENT");
-        boolean support = hasRole(operator, "SUPPORT");
-        boolean finance = hasRole(operator, "FINANCE");
-        return Map.of(
-            "accounts",
-            content || operator.getRole().equals("ADMIN")
-                ? mAccounts.findAll().stream().map(UserView::fromAccount).toList()
-                : List.of(),
-            "products",
-            content ? mProducts.findAll().stream().map(mCatalog::describeProduct).toList() : List.of(),
-            "tickets",
+        boolean canReviewContent = hasRole(operator, "CONTENT");
+        boolean canHandleSupport = hasRole(operator, "SUPPORT");
+        boolean canManageFinance = hasRole(operator, "FINANCE");
+        boolean isAdministrator = operator.getRole().equals("ADMIN");
+        return new DashboardView(
+            canReviewContent ? mAccounts.findAll().stream().map(UserView::fromAccount).toList() : List.of(),
+            canReviewContent ? mProducts.findAll().stream().map(mCatalog::describeProduct).toList() : List.of(),
             mTickets
                 .findAll()
                 .stream()
-                .filter(
-                    ticket ->
-                        (content && ticket.getKind().equals("REPORT")) ||
-                        (support && List.of("SUPPORT", "REFUND").contains(ticket.getKind()))
-                )
+                .filter(ticket -> canReviewTicket(ticket, canReviewContent, canHandleSupport))
                 .map(mCommunity::describeTicket)
                 .toList(),
-            "lines",
-            finance ? mLines.findAll().stream().map(mCommerce::describeLine).toList() : List.of(),
-            "adjustments",
-            finance
-                ? mAdjustments
-                      .findAll()
-                      .stream()
-                      .map(item ->
-                          Map.of(
-                              "lineId",
-                              item.getLineId(),
-                              "sellerId",
-                              item.getSellerId(),
-                              "amountWon",
-                              item.getAmountWon(),
-                              "settlementId",
-                              item.getSettlementId()
-                          )
-                      )
-                      .toList()
-                : List.of(),
-            "audits",
-            operator.getRole().equals("ADMIN")
-                ? mAudits
-                      .findAll()
-                      .stream()
-                      .map(audit ->
-                          Map.of(
-                              "id",
-                              audit.getId(),
-                              "actorId",
-                              audit.getActorId(),
-                              "action",
-                              audit.getAction(),
-                              "targetId",
-                              audit.getTargetId(),
-                              "detail",
-                              audit.getDetail(),
-                              "createdAt",
-                              audit.getCreatedAt()
-                          )
-                      )
-                      .toList()
-                : List.of()
+            canManageFinance ? mLines.findAll().stream().map(mCommerce::describeLine).toList() : List.of(),
+            canManageFinance ? mAdjustments.findAll().stream().map(this::describeAdjustment).toList() : List.of(),
+            isAdministrator ? mAudits.findAll().stream().map(this::describeAudit).toList() : List.of()
         );
     }
 
-    public Map<String, Object> getSellerSettlementSummary(String sellerId) {
+    public SellerSettlementView getSellerSettlementSummary(String sellerId) {
         int adjustmentWon = mAdjustments
             .findPending(sellerId, "")
             .stream()
@@ -172,20 +122,11 @@ public class OperationsService {
             .stream()
             .filter(item -> item.getSellerId().equals(sellerId))
             .toList();
-        return Map.of(
-            "pendingWon",
+        return new SellerSettlementView(
             unsettledWon - adjustmentWon,
-            "adjustmentWon",
             adjustmentWon,
-            "paidWon",
             settlements.stream().mapToInt(Settlement::getAmountWon).sum(),
-            "settlements",
-            settlements
-                .stream()
-                .map(item ->
-                    Map.of("id", item.getId(), "amountWon", item.getAmountWon(), "createdAt", item.getCreatedAt())
-                )
-                .toList()
+            settlements.stream().map(this::describeSettlement).toList()
         );
     }
 
@@ -293,8 +234,12 @@ public class OperationsService {
         }
         String id = UUID.randomUUID().toString();
         mSettlements.save(new Settlement(id, sellerId, amount, System.currentTimeMillis()));
-        eligible.forEach(line -> line.settle(id));
-        adjustments.forEach(adjustment -> adjustment.settle(id));
+        for (OrderLine line : eligible) {
+            line.settle(id);
+        }
+        for (RefundAdjustment adjustment : adjustments) {
+            adjustment.settle(id);
+        }
         audit(operator, "MOCK_SETTLEMENT", sellerId, Integer.toString(amount));
         mCommunity.notifyUser(sellerId, "모의 정산 완료 / Mock settlement complete");
         return amount;
@@ -305,8 +250,11 @@ public class OperationsService {
         // Use the same seller lock as settlement so refund and payout cannot race.
         mEntityManager.find(Account.class, existing.getSellerId(), LockModeType.PESSIMISTIC_WRITE);
         OrderLine line = mEntityManager.find(OrderLine.class, id, LockModeType.PESSIMISTIC_WRITE);
+        if (line == null) {
+            throw new ApiFailure(404, "Order not found");
+        }
         mEntityManager.refresh(line);
-        if (line == null || line.isRefunded()) {
+        if (line.isRefunded()) {
             throw new ApiFailure(409, "Already refunded");
         }
         if (!line.getSettlementId().isEmpty()) {
@@ -350,4 +298,57 @@ public class OperationsService {
             )
         );
     }
+
+    private boolean canReviewTicket(Ticket ticket, boolean canReviewContent, boolean canHandleSupport) {
+        return (
+            (canReviewContent && ticket.getKind().equals("REPORT")) ||
+            (canHandleSupport && List.of("SUPPORT", "REFUND").contains(ticket.getKind()))
+        );
+    }
+
+    private RefundAdjustmentView describeAdjustment(RefundAdjustment adjustment) {
+        return new RefundAdjustmentView(
+            adjustment.getLineId(),
+            adjustment.getSellerId(),
+            adjustment.getAmountWon(),
+            adjustment.getSettlementId()
+        );
+    }
+
+    private AuditView describeAudit(Audit audit) {
+        return new AuditView(
+            audit.getId(),
+            audit.getActorId(),
+            audit.getAction(),
+            audit.getTargetId(),
+            audit.getDetail(),
+            audit.getCreatedAt()
+        );
+    }
+
+    private SettlementView describeSettlement(Settlement settlement) {
+        return new SettlementView(settlement.getId(), settlement.getAmountWon(), settlement.getCreatedAt());
+    }
+
+    public record DashboardView(
+        List<UserView> accounts,
+        List<CatalogService.ProductView> products,
+        List<CommunityService.TicketView> tickets,
+        List<CommerceService.LineView> lines,
+        List<RefundAdjustmentView> adjustments,
+        List<AuditView> audits
+    ) {}
+
+    public record RefundAdjustmentView(String lineId, String sellerId, int amountWon, String settlementId) {}
+
+    public record AuditView(String id, String actorId, String action, String targetId, String detail, long createdAt) {}
+
+    public record SettlementView(String id, int amountWon, long createdAt) {}
+
+    public record SellerSettlementView(
+        int pendingWon,
+        int adjustmentWon,
+        int paidWon,
+        List<SettlementView> settlements
+    ) {}
 }

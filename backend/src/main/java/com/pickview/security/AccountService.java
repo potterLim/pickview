@@ -8,6 +8,7 @@ import com.pickview.repository.ILoginSessionRepository;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Locale;
 import java.util.UUID;
@@ -17,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AccountService {
+
+    private static final long SESSION_TTL_MILLIS = Duration.ofDays(7).toMillis();
 
     private final IAccountRepository mAccounts;
     private final ILoginSessionRepository mSessions;
@@ -37,7 +40,7 @@ public class AccountService {
     @Transactional
     public String login(String email, String password) {
         Account account = mAccounts
-            .findBymEmail(email.strip().toLowerCase(Locale.ROOT))
+            .findByEmail(email.strip().toLowerCase(Locale.ROOT))
             .orElseThrow(() -> new ApiFailure(401, "이메일 또는 비밀번호를 확인해 주세요. / Invalid credentials."));
         if (!mEncoder.matches(password, account.getPasswordHash())) {
             throw new ApiFailure(401, "이메일 또는 비밀번호를 확인해 주세요. / Invalid credentials.");
@@ -48,7 +51,7 @@ public class AccountService {
                 UUID.randomUUID().toString(),
                 account.getId(),
                 hashToken(token),
-                System.currentTimeMillis() + 7L * 24 * 60 * 60 * 1000
+                System.currentTimeMillis() + SESSION_TTL_MILLIS
             )
         );
         return token;
