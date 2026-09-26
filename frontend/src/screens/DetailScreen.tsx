@@ -77,11 +77,11 @@ export function DetailScreen() {
                     <Text style={[styles.heading, { fontSize: 20, lineHeight: 29 }]}>{owned ? t("나의 라이브러리에 담긴 영상", "A part of your library") : t("작은 호기심을, 나의 취향으로.", "Make room for a little curiosity.")}</Text>
                     <View style={{ gap: 10 }}><Text style={{ fontSize: 36, fontWeight: "800", color: colors.ink, letterSpacing: -1 }}>{product.priceWon ? money(product.priceWon) : t("무료", "Free")}</Text>
                         <Text style={styles.subtitle}>{term}</Text></View>
-                    {owned ? <Button icon="play" label={product.kind === "BUNDLE" ? t("라이브러리에서 시청", "Watch in your library") : t("이어서 시청하기", "Continue watching")}
+                    {owned ? <Button fullWidth icon="play" label={product.kind === "BUNDLE" ? t("라이브러리에서 시청", "Watch in your library") : t("이어서 시청하기", "Continue watching")}
                         disabled={busy} onPress={() => product.kind === "BUNDLE" ? navigate("library") : run(play)} />
-                        : <View style={{ gap: 10 }}><Button label={inCart ? t("장바구니로 이동", "View cart") : t("장바구니 담기", "Add to cart")} disabled={busy}
+                        : <View style={{ gap: 10 }}><Button fullWidth label={inCart ? t("장바구니로 이동", "View cart") : t("장바구니 담기", "Add to cart")} disabled={busy}
                             onPress={() => inCart ? navigate("cart") : run(() => addToCart(product.id))} />
-                            <Button secondary label={product.priceWon ? t("바로 구매하기", "Buy now") : t("무료로 소장하기", "Add to my library")} disabled={busy} onPress={() => run(() => addToCart(product.id, true))} /></View>}
+                            <Button fullWidth secondary label={product.priceWon ? t("바로 구매하기", "Buy now") : t("무료로 소장하기", "Add to my library")} disabled={busy} onPress={() => run(() => addToCart(product.id, true))} /></View>}
                     <View style={{ flexDirection: "row", gap: 8, justifyContent: "center", alignItems: "center" }}><Ionicons name="lock-closed-outline" size={17} color={colors.ink} /><Text style={styles.text}>{t("한 번만 결제 · 구독 없음", "One purchase. No subscription.")}</Text></View>
                     <View style={styles.divider} /><Text style={styles.muted}>{t("데모 결제이며 실제 청구되지 않습니다.", "Demo checkout. You will not be charged.")}</Text>
                 </View>

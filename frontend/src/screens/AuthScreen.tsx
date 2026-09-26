@@ -23,7 +23,7 @@ export function AuthScreen() {
         <Field label={t("비밀번호", "Password")} value={password} onChangeText={setPassword} secureTextEntry />
         {register ? <><Field label={t("이름", "Name")} value={name} onChangeText={setName} />
             <Button secondary label={`${adult ? "✓ " : ""}${t("성인임을 확인합니다 (데모)", "I confirm I am an adult (demo)")}`} onPress={() => setAdult(!adult)} /></> : null}
-        <Button label={register ? t("회원가입", "Create account") : t("로그인", "Sign in")} disabled={busy || (register && !adult)} onPress={() => run(submit)} />
+        <Button fullWidth label={register ? t("회원가입", "Create account") : t("로그인", "Sign in")} disabled={busy || (register && !adult)} onPress={() => run(submit)} />
         <Button secondary label={register ? t("로그인으로 돌아가기", "Back to sign in") : t("새 계정 만들기", "Create an account")} onPress={() => setRegister(!register)} />
         <Text style={styles.label}>{t("데모 계정 선택", "Choose a demo account")}</Text>
         <View style={styles.row}>{["buyer", "seller", "admin", "content", "support", "finance"].map(role =>
