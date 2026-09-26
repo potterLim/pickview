@@ -1,4 +1,4 @@
-import { mkdirSync, existsSync } from "node:fs";
+import { mkdirSync, existsSync, readdirSync, copyFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -7,6 +7,13 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const media = resolve(root, "backend/.local/media");
 const ffmpeg = process.env.FFMPEG_PATH ?? "ffmpeg";
 mkdirSync(media, { recursive: true });
+const originals = resolve(root, "content/media");
+if (existsSync(originals)) {
+    for (const file of readdirSync(originals).filter(name => /^sample-video-\d(-preview)?\.mp4$/.test(name))) {
+        const destination = resolve(media, file);
+        if (!existsSync(destination)) { copyFileSync(resolve(originals, file), destination); }
+    }
+}
 
 function generate(filename, duration) {
     const path = resolve(media, filename);

@@ -57,7 +57,8 @@ public class CatalogService {
         return new ProductView(product.getId(), product.getSellerId(), seller.getDisplayName(), product.getTitle(),
                 product.getDescription(), product.getCategory(), product.getPriceWon(), product.getTermDays(),
                 product.getStatus(), product.getThumbnail(), product.getDurationSeconds(), product.getKind(),
-                expandVideoIds(product), rating, reviews.size(), sales, product.getCreatedAt(), product.isBlocked(), product.getTags());
+                expandVideoIds(product), rating, reviews.size(), sales, product.getCreatedAt(), product.isBlocked(), product.getTags(),
+                product.getMediaKey().equals("sample-" + product.getId() + ".mp4"));
     }
 
     public List<String> expandVideoIds(Product product) {
@@ -146,5 +147,5 @@ public class CatalogService {
     public record ProductView(String id, String sellerId, String sellerName, String title, String description,
                               String category, int priceWon, int termDays, String status, String thumbnail,
                               double durationSeconds, String kind, List<String> videoIds, double rating,
-                              int reviewCount, long sales, long createdAt, boolean blocked, String tags) {}
+                              int reviewCount, long sales, long createdAt, boolean blocked, String tags, boolean isDemo) {}
 }

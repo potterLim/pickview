@@ -3,6 +3,8 @@ package com.pickview;
 import com.pickview.api.ApiFailure;
 import com.pickview.commerce.CommerceService;
 import com.pickview.community.CommunityService;
+import com.pickview.config.DemoContentUpgrade;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pickview.model.Account;
 import com.pickview.model.Grant;
 import com.pickview.model.OrderLine;
@@ -63,6 +65,23 @@ class MarketplaceIntegrationTest {
         saveAccount("seller", "BUYER");
         mProducts.save(new Product("video", "seller", "Title", "Description", "EDUCATION", 20000,
                 30, "APPROVED", "studio", "test.mp4", "preview.mp4", 30, "VIDEO", "", false, 1));
+    }
+
+    @Test
+    void sampleUpgradePreservesPurchasesAndDoesNotOverwriteLaterUploads() throws Exception {
+        Product sample = mProducts.save(new Product("video-1", "seller", "Old sample", "Description", "EDUCATION", 1234,
+                30, "APPROVED", "studio", "demo.mp4", "demo-preview.mp4", 30, "VIDEO", "", false, 1));
+        mGrants.save(new Grant("sample-grant", "buyer", "video-1", "existing-line", 0, false));
+        DemoContentUpgrade upgrade = new DemoContentUpgrade(mProducts, new ObjectMapper(), true);
+        upgrade.run();
+        assertEquals("sample-video-1.mp4", sample.getMediaKey());
+        assertEquals("APPROVED", sample.getStatus());
+        assertEquals(1234, sample.getPriceWon());
+        assertTrue(mCommerce.canWatch("buyer", "video-1"));
+        sample.replaceMedia("creator-upload.mp4", "creator-preview.mp4", 60);
+        upgrade.run();
+        assertEquals("creator-upload.mp4", sample.getMediaKey());
+        assertEquals("PENDING", sample.getStatus());
     }
 
     @Test
