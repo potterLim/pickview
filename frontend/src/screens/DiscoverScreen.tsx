@@ -40,6 +40,13 @@ export function DiscoverScreen() {
                   : right.sales - left.sales ||
                     Number(user?.interests.includes(right.category)) - Number(user?.interests.includes(left.category)),
         );
+    const hasFilters = Boolean(query || category || rating || sellerOnly);
+    function clearFilters() {
+        setQuery("");
+        setCategory("");
+        setRating(false);
+        setSellerOnly(false);
+    }
     const title =
         route === "wishlist"
             ? t("찜한 영상", "Your wishlist")
@@ -74,10 +81,12 @@ export function DiscoverScreen() {
                     <Pressable
                         key={value}
                         accessibilityRole="button"
+                        accessibilityState={{ selected: category === value }}
                         onPress={() => setCategory(value ?? "")}
                         style={{
                             paddingVertical: 12,
-                            paddingHorizontal: 22,
+                            paddingHorizontal: width < 600 ? 14 : 22,
+                            minHeight: 44,
                             borderRadius: 24,
                             backgroundColor: category === value ? colors.violet : "#F4F4F8",
                         }}
@@ -106,12 +115,19 @@ export function DiscoverScreen() {
                             fontWeight: "800",
                             lineHeight: width < 600 ? 38 : 47,
                             color: colors.ink,
-                            maxWidth: "60%",
+                            maxWidth: width < 600 ? "100%" : "60%",
                         }}
                     >
                         {t("오늘의 발견,\n내일의 새로운 나.", "A discovery today.\nA new you tomorrow.")}
                     </Text>
-                    <Text style={{ marginTop: 14, color: "#555367", lineHeight: 24, maxWidth: "55%" }}>
+                    <Text
+                        style={{
+                            marginTop: 14,
+                            color: "#555367",
+                            lineHeight: 24,
+                            maxWidth: width < 600 ? "100%" : "55%",
+                        }}
+                    >
                         {t(
                             "좋은 영상을 만나는 것이\n더 나은 하루를 만듭니다.",
                             "A little curiosity.\nA brighter everyday.",
@@ -120,7 +136,15 @@ export function DiscoverScreen() {
                 </ImageBackground>
             ) : null}
             <View style={styles.between}>
-                <Text style={styles.heading}>{t("지금 인기 있는 영상", "Worth a watch")}</Text>
+                <Text style={styles.heading}>
+                    {hasFilters
+                        ? t("검색 결과", "Search results")
+                        : route === "wishlist"
+                          ? t("찜한 영상", "Saved videos")
+                          : route === "following"
+                            ? t("팔로우한 채널의 영상", "From channels you follow")
+                            : t("지금 인기 있는 영상", "Worth a watch")}
+                </Text>
                 <View style={styles.row}>
                     <Button
                         secondary
@@ -150,7 +174,25 @@ export function DiscoverScreen() {
                     />
                 ))}
             </View>
-            {!filtered.length ? <Empty title={t("아직 표시할 영상이 없어요.", "No videos here yet.")} /> : null}
+            {!filtered.length ? (
+                <Empty
+                    title={
+                        hasFilters
+                            ? t("조건에 맞는 영상이 없어요", "No matching videos")
+                            : t("아직 표시할 영상이 없어요.", "No videos here yet.")
+                    }
+                    description={
+                        hasFilters
+                            ? t(
+                                  "다른 검색어를 입력하거나 검색 조건을 초기화해보세요.",
+                                  "Try another search or clear your filters.",
+                              )
+                            : undefined
+                    }
+                    actionLabel={hasFilters ? t("검색 조건 초기화", "Clear filters") : undefined}
+                    onAction={hasFilters ? clearFilters : undefined}
+                />
+            ) : null}
             <View style={[styles.between, { paddingTop: 24, borderTopWidth: 1, borderColor: colors.line }]}>
                 <Text style={styles.muted}>
                     {t(

@@ -186,7 +186,17 @@ export function Field({ label, ...props }: TextInputProps & { label: string }) {
         </View>
     );
 }
-export function Empty({ title, description }: { title: string; description?: string }) {
+export function Empty({
+    title,
+    description,
+    actionLabel,
+    onAction,
+}: {
+    title: string;
+    description?: string;
+    actionLabel?: string;
+    onAction?: () => void;
+}) {
     const { t, navigate } = useStore();
     return (
         <View style={{ paddingVertical: 44, paddingHorizontal: 20, alignItems: "center", gap: 18 }}>
@@ -203,9 +213,13 @@ export function Empty({ title, description }: { title: string; description?: str
                 <Ionicons name="play-outline" size={30} color={colors.violet} />
             </View>
             <Text style={[styles.heading, { textAlign: "center" }]}>{title}</Text>
-            {description ? <Text style={styles.subtitle}>{description}</Text> : null}
+            {description ? <Text style={[styles.subtitle, { textAlign: "center" }]}>{description}</Text> : null}
             <View>
-                <Button label={t("영상 둘러보기", "Explore videos")} onPress={() => navigate("discover")} secondary />
+                <Button
+                    label={actionLabel ?? t("영상 둘러보기", "Explore videos")}
+                    onPress={onAction ?? (() => navigate("discover"))}
+                    secondary
+                />
             </View>
         </View>
     );
