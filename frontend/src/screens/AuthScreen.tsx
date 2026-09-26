@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { Platform, Text, View } from "react-native";
 import { useStore } from "../core/Store";
 import { request } from "../core/api";
 import { Button, Field } from "../ui/Controls";
@@ -29,7 +29,7 @@ export function AuthScreen() {
         <View style={styles.row}>{["buyer", "seller", "admin", "content", "support", "finance"].map(role =>
             <Button secondary key={role} label={role} onPress={() => { setEmail(`${role}@pickview.demo`); setPassword("PickView-demo-2026!"); }} />)}</View>
         <Text style={styles.muted}>{t("소셜 로그인은 연결 전 모의 화면입니다.", "Social sign-in is a simulation, not connected.")}</Text>
-        <View style={styles.row}>{["Kakao", "Google", "Apple"].map(provider => <Button key={provider} secondary label={`${provider} (${t("모의", "mock")})`}
+        <View style={styles.row}>{["Kakao", "Google", ...(Platform.OS === "ios" ? ["Apple"] : [])].map(provider => <Button key={provider} secondary label={`${provider} (${t("모의", "mock")})`}
             onPress={() => notify(t("소셜 인증 연결 전입니다. 위 데모 계정으로 로그인하세요.", "Use a demo account above; social authentication is not connected."))} />)}</View>
     </View>;
 }
