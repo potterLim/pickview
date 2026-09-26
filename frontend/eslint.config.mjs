@@ -5,6 +5,10 @@ export default tseslint.config(
     ...tseslint.configs.recommended,
     {
         rules: {
+            curly: ["error", "all"],
+            eqeqeq: "error",
+            "no-var": "error",
+            "@typescript-eslint/no-shadow": "error",
             "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
             "@typescript-eslint/no-require-imports": ["error", { allow: ["\\.png$"] }],
         },
