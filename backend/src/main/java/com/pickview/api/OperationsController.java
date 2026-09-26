@@ -45,5 +45,10 @@ public class OperationsController {
         return Map.of("amountWon", mOperations.settle(mAccounts.requireAccount(principal.getName()), id));
     }
 
-    public record DecisionRequest(String decision, String reply, boolean approve) {}
+    public record DecisionRequest(String decision, String reply, boolean approve) {
+        public DecisionRequest {
+            decision = decision == null ? "" : decision;
+            reply = reply == null ? "" : reply;
+        }
+    }
 }

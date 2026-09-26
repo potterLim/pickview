@@ -12,6 +12,8 @@ import com.pickview.model.OrderLine;
 import com.pickview.model.Grant;
 import com.pickview.model.Audit;
 import com.pickview.model.Settlement;
+import com.pickview.model.RefundAdjustment;
+import com.pickview.repository.IRefundAdjustmentRepository;
 import com.pickview.repository.IAccountRepository;
 import com.pickview.repository.IProductRepository;
 import com.pickview.repository.ITicketRepository;
@@ -23,6 +25,7 @@ import com.pickview.repository.IPurchaseRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
+import java.time.Clock;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -44,14 +47,19 @@ public class OperationsService {
     private final CommerceService mCommerce;
     private final CommunityService mCommunity;
     private final EntityManager mEntityManager;
+    private final IRefundAdjustmentRepository mAdjustments;
+    private final Clock mClock;
 
     public OperationsService(IAccountRepository accounts, IProductRepository products, ITicketRepository tickets,
                              IOrderLineRepository lines, IGrantRepository grants, IAuditRepository audits,
                              ISettlementRepository settlements, IPurchaseRepository purchases, CatalogService catalog,
-                             CommerceService commerce, CommunityService community, EntityManager entityManager) {
+                             CommerceService commerce, CommunityService community, EntityManager entityManager,
+                             IRefundAdjustmentRepository adjustments, Clock clock) {
         mAccounts = accounts; mProducts = products; mTickets = tickets; mLines = lines; mGrants = grants;
         mAudits = audits; mSettlements = settlements; mPurchases = purchases; mCatalog = catalog;
         mCommerce = commerce; mCommunity = community; mEntityManager = entityManager;
+        mAdjustments = adjustments;
+        mClock = clock;
     }
 
     public Map<String, Object> getDashboard(Account operator) {
@@ -81,6 +89,7 @@ public class OperationsService {
     public void reviewProduct(Account operator, String id, String decision) {
         requireRole(operator, "CONTENT");
         Product product = mCatalog.requireProduct(id);
+        boolean wasPublished = product.getStatus().equals("APPROVED");
         switch (decision) {
             case "APPROVE" -> {
                 if (product.getKind().equals("VIDEO") && product.getMediaKey().isBlank()) { throw new ApiFailure(409, "Missing video"); }
@@ -93,6 +102,7 @@ public class OperationsService {
         }
         audit(operator, "PRODUCT_REVIEW", id, decision);
         mCommunity.notifyUser(product.getSellerId(), "영상 심사 결과 / Video review: " + decision);
+        if (decision.equals("APPROVE") && !wasPublished) { mCommunity.notifyPublication(product); }
     }
 
     @Transactional
@@ -122,27 +132,38 @@ public class OperationsService {
     @Transactional
     public int settle(Account operator, String sellerId) {
         requireRole(operator, "FINANCE");
-        mEntityManager.find(Account.class, sellerId, LockModeType.PESSIMISTIC_WRITE);
-        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        if (mEntityManager.find(Account.class, sellerId, LockModeType.PESSIMISTIC_WRITE) == null) {
+            throw new ApiFailure(404, "Seller not found");
+        }
+        LocalDate today = LocalDate.now(mClock.withZone(ZoneId.of("Asia/Seoul")));
         if (today.getDayOfMonth() < 15) { throw new ApiFailure(409, "매월 15일부터 처리 가능합니다. / Settlement opens on the 15th."); }
         long cutoff = today.withDayOfMonth(1).atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant().toEpochMilli();
         List<OrderLine> eligible = mLines.findAll().stream().filter(line -> line.getSellerId().equals(sellerId)
                 && !line.isRefunded() && line.getSettlementId().isEmpty()
                 && mPurchases.findById(line.getPurchaseId()).orElseThrow().getCreatedAt() < cutoff).toList();
-        int amount = eligible.stream().mapToInt(OrderLine::getSellerAmountWon).sum();
+        List<RefundAdjustment> adjustments = mAdjustments.findPending(sellerId, "");
+        int amount = eligible.stream().mapToInt(OrderLine::getSellerAmountWon).sum()
+                - adjustments.stream().mapToInt(RefundAdjustment::getAmountWon).sum();
         if (amount < 10000) { throw new ApiFailure(409, "정산 가능 금액 1만원 미만은 이월됩니다. / Below payout threshold."); }
         String id = UUID.randomUUID().toString();
         mSettlements.save(new Settlement(id, sellerId, amount, System.currentTimeMillis()));
         eligible.forEach(line -> line.settle(id));
+        adjustments.forEach(adjustment -> adjustment.settle(id));
         audit(operator, "MOCK_SETTLEMENT", sellerId, Integer.toString(amount));
         mCommunity.notifyUser(sellerId, "모의 정산 완료 / Mock settlement complete");
         return amount;
     }
 
     private void refundLine(String id) {
+        OrderLine existing = mLines.findById(id).orElseThrow(() -> new ApiFailure(404, "Order not found"));
+        // Use the same seller lock as settlement so refund and payout cannot race.
+        mEntityManager.find(Account.class, existing.getSellerId(), LockModeType.PESSIMISTIC_WRITE);
         OrderLine line = mEntityManager.find(OrderLine.class, id, LockModeType.PESSIMISTIC_WRITE);
+        mEntityManager.refresh(line);
         if (line == null || line.isRefunded()) { throw new ApiFailure(409, "Already refunded"); }
-        if (!line.getSettlementId().isEmpty()) { throw new ApiFailure(409, "정산 완료 주문은 별도 조정이 필요합니다. / Settled order requires manual adjustment."); }
+        if (!line.getSettlementId().isEmpty()) {
+            mAdjustments.save(new RefundAdjustment(line.getId(), line.getSellerId(), line.getSellerAmountWon()));
+        }
         line.refund();
         mGrants.findAll().stream().filter(grant -> grant.getLineId().equals(id)).forEach(Grant::revoke);
         boolean allRefunded = mLines.findAll().stream().filter(item -> item.getPurchaseId().equals(line.getPurchaseId())).allMatch(OrderLine::isRefunded);

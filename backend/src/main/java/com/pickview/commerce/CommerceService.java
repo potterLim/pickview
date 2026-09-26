@@ -1,5 +1,7 @@
 package com.pickview.commerce;
 
+import jakarta.validation.constraints.NotNull;
+
 import com.pickview.api.ApiFailure;
 import com.pickview.catalog.CatalogService;
 import com.pickview.model.Account;
@@ -109,7 +111,7 @@ public class CommerceService {
         }
     }
 
-    public record CheckoutRequest(List<String> productIds, String requestKey, String channel, String outcome) {}
+    public record CheckoutRequest(@NotNull List<String> productIds, @NotNull String requestKey, @NotNull String channel, @NotNull String outcome) {}
     public record LineView(String id, String productId, String title, int priceWon, int channelFeeWon, int platformFeeWon,
                            int sellerAmountWon, int termDays, boolean refunded, String settlementId) {}
     public record OrderView(String id, String status, String channel, long createdAt, List<LineView> lines, int totalWon) {}

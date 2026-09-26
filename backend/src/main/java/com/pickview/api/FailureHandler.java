@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class FailureHandler {
@@ -15,9 +17,14 @@ public class FailureHandler {
         return ResponseEntity.status(failure.getStatus()).body(Map.of("message", failure.getMessage()));
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidation(MethodArgumentNotValidException failure) {
+    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
+    public ResponseEntity<Map<String, String>> handleValidation(Exception failure) {
         return ResponseEntity.badRequest().body(Map.of("message", "입력값을 확인해 주세요. / Check input values."));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, String>> handleUploadLimit(MaxUploadSizeExceededException failure) {
+        return ResponseEntity.status(413).body(Map.of("message", "최대 100MB 파일을 선택하세요. / Choose a file up to 100MB."));
     }
 
     @ExceptionHandler({DataIntegrityViolationException.class, ObjectOptimisticLockingFailureException.class})

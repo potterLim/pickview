@@ -1,5 +1,7 @@
 package com.pickview.community;
 
+import jakarta.validation.constraints.NotNull;
+
 import com.pickview.api.ApiFailure;
 import com.pickview.commerce.CommerceService;
 import com.pickview.catalog.CatalogService;
@@ -8,6 +10,7 @@ import com.pickview.model.Engagement;
 import com.pickview.model.Ticket;
 import com.pickview.model.Notice;
 import com.pickview.model.OrderLine;
+import com.pickview.model.Product;
 import com.pickview.repository.IEngagementRepository;
 import com.pickview.repository.ITicketRepository;
 import com.pickview.repository.INoticeRepository;
@@ -84,6 +87,9 @@ public class CommunityService {
         if (request.kind().equals("INQUIRY") || request.kind().equals("REPORT")) {
             recipient = mCatalog.requireProduct(request.targetId()).getSellerId();
         }
+        if (request.kind().equals("INQUIRY") && isBlocked(account.getId(), recipient)) {
+            throw new ApiFailure(403, "차단한 계정과는 문의할 수 없습니다. / Inquiry blocked.");
+        }
         if (request.kind().equals("REFUND")) {
             OrderLine line = mLines.findById(request.targetId()).orElseThrow(() -> new ApiFailure(404, "Order not found"));
             if (!line.getBuyerId().equals(account.getId()) || line.isRefunded()) { throw new ApiFailure(403, "Invalid refund target"); }
@@ -105,6 +111,7 @@ public class CommunityService {
         if (!ticket.getKind().equals("INQUIRY") || !ticket.getRecipientId().equals(userId) || reply.isBlank() || reply.length() > 4000) {
             throw new ApiFailure(403, "판매자만 답변할 수 있습니다. / Seller only.");
         }
+        if (isBlocked(userId, ticket.getUserId())) { throw new ApiFailure(403, "Inquiry blocked"); }
         ticket.resolve(reply, "RESOLVED");
         notifyUser(ticket.getUserId(), "문의 답변이 도착했습니다. / Your inquiry has a reply.");
     }
@@ -125,6 +132,19 @@ public class CommunityService {
         mNotices.save(new Notice(UUID.randomUUID().toString(), userId, message, false, System.currentTimeMillis()));
     }
 
+    public void notifyPublication(Product product) {
+        mEngagements.findAll().stream()
+                .filter(item -> item.getKind().equals("NOTIFY") && item.getTargetId().equals(product.getSellerId()))
+                .filter(item -> !isBlocked(item.getUserId(), product.getSellerId()))
+                .forEach(item -> notifyUser(item.getUserId(), "새 영상 / New video: " + product.getTitle()));
+    }
+
+    private boolean isBlocked(String first, String second) {
+        return mEngagements.findAll().stream().anyMatch(item -> item.getKind().equals("BLOCK")
+                && ((item.getUserId().equals(first) && item.getTargetId().equals(second))
+                || (item.getUserId().equals(second) && item.getTargetId().equals(first))));
+    }
+
     public TicketView describeTicket(Ticket ticket) {
         return new TicketView(ticket.getId(), ticket.getUserId(), ticket.getTargetId(), ticket.getRecipientId(), ticket.getKind(),
                 ticket.getMessage(), ticket.getStatus(), ticket.getReply(), ticket.getCreatedAt());
@@ -135,9 +155,9 @@ public class CommunityService {
         return new EngagementView(item.getId(), item.getTargetId(), item.getKind(), item.getContent(), item.getNumberValue(), name);
     }
 
-    public record ActivityRequest(String targetId, String kind, String content, double numberValue) {}
+    public record ActivityRequest(@NotNull String targetId, @NotNull String kind, @NotNull String content, double numberValue) {}
     public record EngagementView(String id, String targetId, String kind, String content, double numberValue, String author) {}
-    public record TicketRequest(String targetId, String kind, String message) {}
+    public record TicketRequest(@NotNull String targetId, @NotNull String kind, @NotNull String message) {}
     public record TicketView(String id, String userId, String targetId, String recipientId, String kind, String message, String status, String reply, long createdAt) {}
     public record NoticeView(String id, String message, boolean read, long createdAt) {}
 }
