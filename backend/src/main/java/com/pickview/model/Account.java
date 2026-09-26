@@ -72,4 +72,5 @@ public class Account {
     public void rejectSeller() { mSellerStatus = "REJECTED"; }
     public void changeSettings(String language, String interests) { mLanguage = language; mInterests = interests; }
     public void changeRole(String role) { mRole = role; }
+    public void changeProfile(String displayName, String bio) { mDisplayName = displayName; mBio = bio; }
 }

@@ -1,11 +1,13 @@
 package com.pickview.api;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.Valid;
+
 import com.pickview.catalog.CatalogService;
 import com.pickview.commerce.CommerceService;
 import com.pickview.community.CommunityService;
 import com.pickview.model.Account;
 import com.pickview.model.Product;
-import com.pickview.repository.IAccountRepository;
 import com.pickview.repository.IOrderLineRepository;
 import com.pickview.security.AccountService;
 import java.security.Principal;
@@ -26,13 +28,12 @@ public class MarketplaceController {
     private final CommerceService mCommerce;
     private final CommunityService mCommunity;
     private final AccountService mAccounts;
-    private final IAccountRepository mAccountRepository;
     private final IOrderLineRepository mLines;
 
     public MarketplaceController(CatalogService catalog, CommerceService commerce, CommunityService community,
-                                 AccountService accounts, IAccountRepository accountRepository, IOrderLineRepository lines) {
+                                 AccountService accounts, IOrderLineRepository lines) {
         mCatalog = catalog; mCommerce = commerce; mCommunity = community; mAccounts = accounts;
-        mAccountRepository = accountRepository; mLines = lines;
+        mLines = lines;
     }
 
     @GetMapping("/api/public/products")
@@ -55,7 +56,7 @@ public class MarketplaceController {
     public List<CommunityService.EngagementView> getReviews(@PathVariable String id) { return mCommunity.listReviews(id); }
 
     @PostMapping("/api/checkout")
-    public CommerceService.OrderView checkout(Principal principal, @RequestBody CommerceService.CheckoutRequest request) {
+    public CommerceService.OrderView checkout(Principal principal, @Valid @RequestBody CommerceService.CheckoutRequest request) {
         return mCommerce.checkout(mAccounts.requireAccount(principal.getName()), request);
     }
 
@@ -69,7 +70,7 @@ public class MarketplaceController {
     public List<CommunityService.EngagementView> listActivity(Principal principal) { return mCommunity.listActivity(principal.getName()); }
 
     @PutMapping("/api/activity")
-    public void saveActivity(Principal principal, @RequestBody CommunityService.ActivityRequest request) {
+    public void saveActivity(Principal principal, @Valid @RequestBody CommunityService.ActivityRequest request) {
         mCommunity.saveActivity(mAccounts.requireAccount(principal.getName()), request);
     }
 
@@ -82,12 +83,12 @@ public class MarketplaceController {
     public List<CommunityService.TicketView> listTickets(Principal principal) { return mCommunity.listTickets(principal.getName()); }
 
     @PostMapping("/api/tickets")
-    public void createTicket(Principal principal, @RequestBody CommunityService.TicketRequest request) {
+    public void createTicket(Principal principal, @Valid @RequestBody CommunityService.TicketRequest request) {
         mCommunity.createTicket(mAccounts.requireAccount(principal.getName()), request);
     }
 
     @PostMapping("/api/tickets/{id}/reply")
-    public void reply(Principal principal, @PathVariable String id, @RequestBody ReplyRequest request) {
+    public void reply(Principal principal, @PathVariable String id, @Valid @RequestBody ReplyRequest request) {
         mCommunity.replyToInquiry(principal.getName(), id, request.reply());
     }
 
@@ -99,14 +100,14 @@ public class MarketplaceController {
 
     @PutMapping("/api/settings")
     @Transactional
-    public void saveSettings(Principal principal, @RequestBody SettingsRequest request) {
+    public void saveSettings(Principal principal, @Valid @RequestBody SettingsRequest request) {
         if (!List.of("ko", "en").contains(request.language()) || request.interests().length() > 100) { throw new ApiFailure(400, "Invalid settings"); }
         mAccounts.requireAccount(principal.getName()).changeSettings(request.language(), request.interests());
     }
 
     @PostMapping("/api/seller/apply")
     @Transactional
-    public void applySeller(Principal principal, @RequestBody SellerRequest request) {
+    public void applySeller(Principal principal, @Valid @RequestBody SellerRequest request) {
         if (request.displayName().isBlank() || request.displayName().length() > 80 || request.bio().length() > 1000
                 || !List.of("PERSONAL", "BUSINESS").contains(request.type())) { throw new ApiFailure(400, "Invalid seller profile"); }
         Account account = mAccounts.requireAccount(principal.getName());
@@ -117,13 +118,24 @@ public class MarketplaceController {
     @GetMapping("/api/seller/products")
     public List<CatalogService.ProductView> listSellerProducts(Principal principal) { return mCatalog.listOwned(principal.getName()); }
 
+    @PutMapping("/api/seller/profile")
+    @Transactional
+    public void updateSellerProfile(Principal principal, @Valid @RequestBody SellerRequest request) {
+        Account account = mAccounts.requireAccount(principal.getName());
+        if (!account.getSellerStatus().equals("APPROVED")) { throw new ApiFailure(403, "Approved seller required"); }
+        if (request.displayName().isBlank() || request.displayName().length() > 80 || request.bio().length() > 1000) {
+            throw new ApiFailure(400, "Invalid profile");
+        }
+        account.changeProfile(request.displayName(), request.bio());
+    }
+
     @PostMapping("/api/seller/products")
-    public CatalogService.ProductView createProduct(Principal principal, @RequestBody CatalogService.ProductRequest request) {
+    public CatalogService.ProductView createProduct(Principal principal, @Valid @RequestBody CatalogService.ProductRequest request) {
         return mCatalog.describeProduct(mCatalog.createProduct(mAccounts.requireAccount(principal.getName()), request));
     }
 
     @PutMapping("/api/seller/products/{id}")
-    public void updateProduct(Principal principal, @PathVariable String id, @RequestBody CatalogService.ProductRequest request) {
+    public void updateProduct(Principal principal, @PathVariable String id, @Valid @RequestBody CatalogService.ProductRequest request) {
         mCatalog.updateProduct(mAccounts.requireAccount(principal.getName()), id, request);
     }
 
@@ -137,7 +149,7 @@ public class MarketplaceController {
         return mLines.findAll().stream().filter(line -> line.getSellerId().equals(principal.getName())).map(mCommerce::describeLine).toList();
     }
 
-    public record ReplyRequest(String reply) {}
-    public record SellerRequest(String displayName, String bio, String type) {}
-    public record SettingsRequest(String language, String interests) {}
+    public record ReplyRequest(@NotNull String reply) {}
+    public record SellerRequest(@NotNull String displayName, @NotNull String bio, @NotNull String type) {}
+    public record SettingsRequest(@NotNull String language, @NotNull String interests) {}
 }

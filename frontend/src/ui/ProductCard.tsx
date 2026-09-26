@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import type { IProduct } from "../core/types";
 import { useStore } from "../core/Store";
 import { colors, money, styles } from "./theme";
+import { API_URL } from "../core/api";
 
 export const thumbnails: Record<string, ImageSourcePropType> = {
     studio: require("../../assets/studio.png"),
@@ -13,10 +14,12 @@ export function ProductCard({ product, width }: { product: IProduct; width: numb
     const { navigate, t, language } = useStore();
     const title = language === "en" && /^video-[1-6]$/.test(product.id) ? product.description.split("\n")[0] : product.title;
     const duration = `${Math.floor(product.durationSeconds / 60).toString().padStart(2, "0")}:${Math.floor(product.durationSeconds % 60).toString().padStart(2, "0")}`;
+    const thumbnail = thumbnails[product.thumbnail] ?? (/^[a-f0-9-]{36}$/.test(product.thumbnail)
+        ? { uri: `${API_URL}/api/public/thumbnails/${product.id}?v=${product.thumbnail}` } : null);
     return <Pressable accessibilityRole="button" accessibilityLabel={product.title} onPress={() => navigate("detail", product)}
         style={({ pressed }) => ({ width, gap: 10, opacity: pressed ? .85 : 1 })}>
         <View style={{ aspectRatio: 16 / 9, borderRadius: 12, overflow: "hidden", backgroundColor: colors.pale }}>
-            {thumbnails[product.thumbnail] ? <Image source={thumbnails[product.thumbnail]} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+            {thumbnail ? <Image source={thumbnail} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
                 : <View style={{ flex: 1, backgroundColor: product.category === "FINANCE" ? "#E4EBDE" : "#2A2335", padding: 25, justifyContent: "center" }}>
                     <Text style={{ fontSize: 29, lineHeight: 38, fontWeight: "800", color: product.category === "FINANCE" ? "#314A2B" : "#F1CF9D" }}>
                         {product.category === "FINANCE" ? "Small steps.\nBig changes." : "A little laugh.\nA better day."}</Text>

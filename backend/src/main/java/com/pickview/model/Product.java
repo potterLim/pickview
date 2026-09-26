@@ -41,6 +41,9 @@ public class Product {
     @Column(name = "thumbnail", nullable = false, length = 12000)
     private String mThumbnail;
 
+    @Column(name = "tags", nullable = false, length = 300)
+    private String mTags = "";
+
     @Column(name = "media_key", nullable = false, length = 12000)
     private String mMediaKey;
 
@@ -94,6 +97,8 @@ public class Product {
     public int getTermDays() { return mTermDays; }
     public String getStatus() { return mStatus; }
     public String getThumbnail() { return mThumbnail; }
+    public String getTags() { return mTags; }
+    public void changeTags(String tags) { mTags = tags; }
     public String getMediaKey() { return mMediaKey; }
     public String getPreviewKey() { return mPreviewKey; }
     public double getDurationSeconds() { return mDurationSeconds; }
@@ -108,5 +113,6 @@ public class Product {
     public void submit() { mStatus = "PENDING"; }
     public void block() { mBlocked = true; }
     public void revise(String title, String description, int priceWon, int termDays) { mTitle = title; mDescription = description; mPriceWon = priceWon; mTermDays = termDays; }
+    public void changePresentation(String category, String thumbnail) { mCategory = category; mThumbnail = thumbnail; }
     public void replaceMedia(String mediaKey, String previewKey, double durationSeconds) { mMediaKey = mediaKey; mPreviewKey = previewKey; mDurationSeconds = durationSeconds; mStatus = "PENDING"; }
 }

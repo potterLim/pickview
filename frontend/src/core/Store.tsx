@@ -62,6 +62,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => { AsyncStorage.getItem("pickview.token").then(value => setToken(value ?? "")).catch(() => setMessage("Session storage unavailable")); }, []);
     useEffect(() => {
+        if (user?.language === "ko" || user?.language === "en") { setLanguageState(user.language); }
+    }, [user?.id, user?.language]);
+    useEffect(() => {
         refresh().catch(error => setMessage(String(error.message)));
         return () => refreshController.current?.abort();
     }, [refresh]);
@@ -79,14 +82,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async function signIn(next: string) {
         refreshController.current?.abort();
         await AsyncStorage.setItem("pickview.token", next);
-        setUser(null); setActivity([]); setLibrary([]); setToken(next); setRoute("discover");
+        setUser(null); setActivity([]); setLibrary([]); setMessage(""); setToken(next); setRoute("discover");
     }
     async function signOut() {
         refreshController.current?.abort();
         try { await request("/auth/logout", token, "POST"); }
         finally {
             await AsyncStorage.removeItem("pickview.token");
-            setToken(""); setUser(null); setActivity([]); setLibrary([]); setSelected(null); setRoute("discover");
+            setToken(""); setUser(null); setActivity([]); setLibrary([]); setSelected(null); setMessage(""); setRoute("discover");
         }
     }
     async function run(action: () => Promise<void>) {

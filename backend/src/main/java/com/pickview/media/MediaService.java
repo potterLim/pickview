@@ -7,6 +7,7 @@ import com.pickview.catalog.CatalogService;
 import com.pickview.commerce.CommerceService;
 import com.pickview.model.Account;
 import com.pickview.model.Product;
+import com.pickview.repository.IAccountRepository;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -27,11 +28,14 @@ public class MediaService {
     private final ObjectMapper mMapper;
     private final String mFfmpeg;
     private final String mFfprobe;
+    private final IAccountRepository mAccounts;
     private final ConcurrentHashMap<String, PlaybackTicket> mTickets = new ConcurrentHashMap<>();
 
     public MediaService(MediaStorage storage, CatalogService catalog, CommerceService commerce, ObjectMapper mapper,
-                        @Value("${pickview.ffmpeg}") String ffmpeg, @Value("${pickview.ffprobe}") String ffprobe) {
+                        @Value("${pickview.ffmpeg}") String ffmpeg, @Value("${pickview.ffprobe}") String ffprobe,
+                        IAccountRepository accounts) {
         mStorage = storage; mCatalog = catalog; mCommerce = commerce; mMapper = mapper; mFfmpeg = ffmpeg; mFfprobe = ffprobe;
+        mAccounts = accounts;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -63,7 +67,16 @@ public class MediaService {
         if (product.isBlocked() || !mCommerce.canWatch(buyerId, productId)) { throw new ApiFailure(403, "시청 권한이 없습니다. / Playback access denied."); }
         mTickets.entrySet().removeIf(entry -> entry.getValue().expiresAt() < System.currentTimeMillis());
         String token = UUID.randomUUID().toString();
-        mTickets.put(token, new PlaybackTicket(buyerId, productId, System.currentTimeMillis() + 2 * 60 * 60 * 1000L));
+        mTickets.put(token, new PlaybackTicket(buyerId, productId, System.currentTimeMillis() + 2 * 60 * 60 * 1000L, false));
+        return token;
+    }
+
+    public String issueReviewTicket(Account account, String productId) {
+        Product product = mCatalog.requireProduct(productId);
+        if (!canInspect(account, product) || product.getMediaKey().isBlank()) { throw new ApiFailure(403, "Review access denied"); }
+        mTickets.entrySet().removeIf(entry -> entry.getValue().expiresAt() < System.currentTimeMillis());
+        String token = UUID.randomUUID().toString();
+        mTickets.put(token, new PlaybackTicket(account.getId(), productId, System.currentTimeMillis() + 15 * 60 * 1000L, true));
         return token;
     }
 
@@ -71,7 +84,12 @@ public class MediaService {
         PlaybackTicket ticketOrNull = mTickets.get(token);
         if (ticketOrNull == null || ticketOrNull.expiresAt() < System.currentTimeMillis()) { throw new ApiFailure(403, "Playback link expired"); }
         Product product = mCatalog.requireProduct(ticketOrNull.productId());
-        if (product.isBlocked() || !mCommerce.canWatch(ticketOrNull.buyerId(), product.getId())) { throw new ApiFailure(403, "Playback access revoked"); }
+        if (ticketOrNull.review()) {
+            Account account = mAccounts.findById(ticketOrNull.buyerId()).orElseThrow(() -> new ApiFailure(403, "Account unavailable"));
+            if (!canInspect(account, product)) { throw new ApiFailure(403, "Review access revoked"); }
+        } else if (product.isBlocked() || !mCommerce.canWatch(ticketOrNull.buyerId(), product.getId())) {
+            throw new ApiFailure(403, "Playback access revoked");
+        }
         return mStorage.getFile(product.getMediaKey());
     }
 
@@ -111,5 +129,9 @@ public class MediaService {
         } finally { Files.deleteIfExists(log); }
     }
 
-    private record PlaybackTicket(String buyerId, String productId, long expiresAt) {}
+    private boolean canInspect(Account account, Product product) {
+        return List.of("ADMIN", "CONTENT").contains(account.getRole()) || product.getSellerId().equals(account.getId());
+    }
+
+    private record PlaybackTicket(String buyerId, String productId, long expiresAt, boolean review) {}
 }

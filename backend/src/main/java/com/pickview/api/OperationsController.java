@@ -20,6 +20,9 @@ public class OperationsController {
     @GetMapping("/api/admin/dashboard")
     public Map<String, Object> getDashboard(Principal principal) { return mOperations.getDashboard(mAccounts.requireAccount(principal.getName())); }
 
+    @GetMapping("/api/seller/settlements")
+    public Map<String, Object> getSellerSettlements(Principal principal) { return mOperations.getSellerSettlementSummary(principal.getName()); }
+
     @PostMapping("/api/admin/sellers/{id}")
     public void reviewSeller(Principal principal, @PathVariable String id, @RequestBody DecisionRequest request) {
         mOperations.reviewSeller(mAccounts.requireAccount(principal.getName()), id, request.approve());

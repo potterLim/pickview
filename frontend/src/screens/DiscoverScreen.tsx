@@ -20,7 +20,7 @@ export function DiscoverScreen() {
         && (!rating || product.rating >= 4)
         && (route !== "wishlist" || selectedIds.includes(product.id))
         && (route !== "following" || selectedIds.includes(product.sellerId))
-        && (sellerOnly ? product.sellerName : `${product.title} ${product.description} ${product.sellerName}`).toLowerCase().includes(query.toLowerCase()))
+        && (sellerOnly ? product.sellerName : `${product.title} ${product.description} ${product.sellerName} ${product.tags}`).toLowerCase().includes(query.toLowerCase()))
         .sort((left, right) => sort === "rating" ? right.rating - left.rating : sort === "new" ? right.createdAt - left.createdAt
             : right.sales - left.sales || Number(user?.interests.includes(right.category)) - Number(user?.interests.includes(left.category)));
     const title = route === "wishlist" ? t("찜한 영상", "Your wishlist") : route === "following" ? t("팔로우한 크리에이터", "Following creators") : t("구독 없이, 보고 싶은 영상만.", "Your next discovery. No subscription.");

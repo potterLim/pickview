@@ -5,6 +5,7 @@ import { request } from "../core/api";
 import type { IDashboard } from "../core/types";
 import { Button, Field, Loading } from "../ui/Controls";
 import { money, styles } from "../ui/theme";
+import { InspectionPlayer } from "../ui/InspectionPlayer";
 
 export function AdminScreen() {
     const { token, user, t, run, refresh, notify } = useStore();
@@ -27,7 +28,8 @@ export function AdminScreen() {
         {dashboard.products.map(product => <View style={[styles.panel, styles.between]} key={product.id}><View style={{ flex: 1 }}><Text style={styles.text}>{product.title}</Text><Text style={styles.muted}>{product.sellerName} · {product.status}</Text></View>
             <Button label={t("승인", "Approve")} onPress={() => run(() => decide(`/admin/products/${product.id}`, { decision: "APPROVE" }))} />
             <Button secondary label={t("반려", "Reject")} onPress={() => run(() => decide(`/admin/products/${product.id}`, { decision: "REJECT" }))} />
-            <Button secondary label={t("제공 중단", "Block access")} onPress={() => run(() => decide(`/admin/products/${product.id}`, { decision: "BLOCK" }))} /></View>)}
+            <Button secondary label={t("제공 중단", "Block access")} onPress={() => run(() => decide(`/admin/products/${product.id}`, { decision: "BLOCK" }))} />
+            {product.kind === "VIDEO" && product.durationSeconds > 0 ? <InspectionPlayer productId={product.id} /> : null}</View>)}
         <Text style={styles.heading}>{t("신고 · 고객지원 · 환불", "Reports · Support · Refunds")}</Text>
         <Field label={t("처리 답변", "Resolution message")} value={reply} onChangeText={setReply} multiline />
         {dashboard.tickets.map(ticket => <View style={styles.panel} key={ticket.id}><View style={styles.between}><Text style={styles.badge}>{ticket.kind} · {ticket.status}</Text><Text style={styles.muted}>{ticket.id.slice(0, 8)}</Text></View>
@@ -37,6 +39,8 @@ export function AdminScreen() {
         {["ADMIN", "FINANCE"].includes(user?.role ?? "") ? <View style={styles.panel}><Text style={styles.heading}>{t("모의 정산", "Mock settlements")}</Text>
             <Text style={styles.subtitle}>{t("전월 실적 · 매월 15일부터 · 1만원 미만 이월", "Prior month · From the 15th · KRW 10,000 minimum")}</Text>
             <Text style={styles.text}>{t("미환불 판매자 몫", "Unrefunded seller share")}: {money(dashboard.lines.filter(line => !line.refunded).reduce((sum, line) => sum + line.sellerAmountWon, 0))}</Text>
+            {dashboard.adjustments.filter(item => !item.settlementId).map(item => <Text key={item.lineId} style={styles.muted}>
+                {t("환불 차감 이월", "Refund deduction carried forward")}: {item.sellerId} · −{money(item.amountWon)}</Text>)}
             <Field label={t("판매자 ID", "Seller ID")} value={sellerId} onChangeText={setSellerId} />
             <Button label={t("모의 정산 실행", "Run mock settlement")} onPress={() => run(() => decide(`/admin/settlements/${sellerId}`, {}))} /></View> : null}
         {user?.role === "ADMIN" ? <><View style={styles.panel}><Text style={styles.heading}>{t("운영자 권한 관리", "Operator roles")}</Text>

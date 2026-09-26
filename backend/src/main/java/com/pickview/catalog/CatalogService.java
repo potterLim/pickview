@@ -1,5 +1,7 @@
 package com.pickview.catalog;
 
+import jakarta.validation.constraints.NotNull;
+
 import com.pickview.api.ApiFailure;
 import com.pickview.model.Account;
 import com.pickview.model.Product;
@@ -55,7 +57,7 @@ public class CatalogService {
         return new ProductView(product.getId(), product.getSellerId(), seller.getDisplayName(), product.getTitle(),
                 product.getDescription(), product.getCategory(), product.getPriceWon(), product.getTermDays(),
                 product.getStatus(), product.getThumbnail(), product.getDurationSeconds(), product.getKind(),
-                expandVideoIds(product), rating, reviews.size(), sales, product.getCreatedAt(), product.isBlocked());
+                expandVideoIds(product), rating, reviews.size(), sales, product.getCreatedAt(), product.isBlocked(), product.getTags());
     }
 
     public List<String> expandVideoIds(Product product) {
@@ -86,6 +88,7 @@ public class CatalogService {
         Product product = new Product(UUID.randomUUID().toString(), seller.getId(), request.title(), request.description(),
                 request.category(), request.priceWon(), request.termDays(), "DRAFT", request.thumbnail(), "", "", 0,
                 request.kind(), bundleIds, false, System.currentTimeMillis());
+        product.changeTags(request.tags());
         return mProducts.save(product);
     }
 
@@ -94,6 +97,16 @@ public class CatalogService {
         Product product = requireOwnedProduct(seller, id);
         validateProduct(request);
         product.revise(request.title(), request.description(), request.priceWon(), request.termDays());
+        if (!product.getKind().equals(request.kind()) || (product.getKind().equals("BUNDLE")
+                && !expandVideoIds(product).equals(request.videoIds()))) {
+            throw new ApiFailure(400, "상품 유형과 패키지 구성은 변경할 수 없습니다. / Product composition is immutable.");
+        }
+        if (product.getKind().equals("BUNDLE") && request.priceWon() > expandVideoIds(product).stream()
+                .map(this::requireProduct).mapToInt(Product::getPriceWon).sum()) {
+            throw new ApiFailure(400, "Bundle exceeds individual total");
+        }
+        product.changePresentation(request.category(), request.thumbnail());
+        product.changeTags(request.tags());
         mAudits.save(new Audit(UUID.randomUUID().toString(), seller.getId(), "EDIT_PRODUCT", id, request.title(), System.currentTimeMillis()));
     }
 
@@ -113,7 +126,7 @@ public class CatalogService {
     }
 
     private void validateProduct(ProductRequest request) {
-        if (request.title().isBlank() || request.title().length() > 150 || request.description().length() > 10000
+        if (request.title().isBlank() || request.title().length() > 150 || request.description().length() > 10000 || request.tags().length() > 300
                 || !List.of("EDUCATION", "FINANCE", "COMEDY").contains(request.category())
                 || !List.of(0, 7, 30, 90).contains(request.termDays())
                 || request.priceWon() < 0 || request.priceWon() > 1000000
@@ -126,10 +139,12 @@ public class CatalogService {
         }
     }
 
-    public record ProductRequest(String title, String description, String category, int priceWon, int termDays,
-                                 String thumbnail, String kind, List<String> videoIds, boolean hasRights) {}
+    public record ProductRequest(@NotNull String title, @NotNull String description, @NotNull String category, int priceWon, int termDays,
+                                 @NotNull String thumbnail, @NotNull String kind, @NotNull List<String> videoIds, boolean hasRights, String tags) {
+        public ProductRequest { tags = tags == null ? "" : tags.strip(); }
+    }
     public record ProductView(String id, String sellerId, String sellerName, String title, String description,
                               String category, int priceWon, int termDays, String status, String thumbnail,
                               double durationSeconds, String kind, List<String> videoIds, double rating,
-                              int reviewCount, long sales, long createdAt, boolean blocked) {}
+                              int reviewCount, long sales, long createdAt, boolean blocked, String tags) {}
 }

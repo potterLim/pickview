@@ -66,7 +66,7 @@ export function DetailScreen() {
     }
     return <View style={styles.page}>
         <Button secondary label={t("탐색으로 돌아가기", "Back to explore")} onPress={() => navigate("discover")} />
-        <Text style={styles.title}>{language === "en" ? product.description.split("\n")[0] : product.title}</Text>
+        <Text style={styles.title}>{language === "en" && /^video-[1-6]$/.test(product.id) ? product.description.split("\n")[0] : product.title}</Text>
         <View style={styles.between}><Button secondary label={product.sellerName} onPress={() => navigate("seller", product)} />
             <Text style={styles.badge}>{product.kind === "BUNDLE" ? t("영상 패키지", "Video bundle") : t("단품 영상", "Single video")}</Text></View>
         {uri ? <VideoPlayer key={uri} uri={uri} product={product} full={full} /> : null}

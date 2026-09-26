@@ -81,9 +81,11 @@ class MarketplaceIntegrationTest {
         mOperations.resolveTicket(mAdmin, "refund-ticket", "Approved", true);
         assertFalse(mCommerce.canWatch("buyer", "video"));
         assertEquals(15000, mAdjustments.findById("refunded").orElseThrow().getAmountWon());
+        assertEquals(-15000, mOperations.getSellerSettlementSummary("seller").get("pendingWon"));
         saveHistoricalLine("eligible", 30000, "");
         assertEquals(15000, mOperations.settle(mAdmin, "seller"));
         assertTrue(mAdjustments.findPending("seller", "").isEmpty());
+        assertEquals(0, mOperations.getSellerSettlementSummary("seller").get("pendingWon"));
         assertThrows(ApiFailure.class, () -> mOperations.settle(mAdmin, "seller"));
         assertThrows(ApiFailure.class, () -> mOperations.resolveTicket(mAdmin, "refund-ticket", "Again", true));
     }

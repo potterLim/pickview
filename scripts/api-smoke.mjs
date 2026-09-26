@@ -86,10 +86,36 @@ if (process.env.TEST_VIDEO) {
         const response = await fetch(`${base}/seller/products/${product.id}/upload`, { method: "POST", headers: { Authorization: `Bearer ${seller}` }, body });
         assert.equal(response.status, 200, await response.text());
         assert.ok(!(await call("/public/products")).some(item => item.id === product.id));
+        await call(`/media/review/${product.id}`, outsider, {}, "POST", 403);
+        await call(`/media/review/${product.id}`, support, {}, "POST", 403);
+        const reviewPath = (await call(`/media/review/${product.id}`, admin, {})).path;
+        assert.equal((await fetch(base.replace(/\/api$/, "") + reviewPath, { headers: { Range: "bytes=0-255" } })).status, 206);
+        await call(`/media/review/${product.id}`, seller, {});
+        if (process.env.TEST_THUMBNAIL) {
+            const thumbnailBody = new FormData();
+            thumbnailBody.append("file", new Blob([await readFile(process.env.TEST_THUMBNAIL)], { type: "image/png" }), "thumbnail.png");
+            const thumbnailResponse = await fetch(`${base}/seller/products/${product.id}/thumbnail`, {
+                method: "POST", headers: { Authorization: `Bearer ${seller}` }, body: thumbnailBody,
+            });
+            assert.equal(thumbnailResponse.status, 200, await thumbnailResponse.text());
+            assert.equal((await fetch(`${base}/public/thumbnails/${product.id}`)).status, 404);
+        }
         await call(`/admin/products/${product.id}`, admin, { decision: "APPROVE" });
         assert.equal((await fetch(`${base}/public/preview/${product.id}`)).status, 200);
+        if (process.env.TEST_THUMBNAIL) { assert.equal((await fetch(`${base}/public/thumbnails/${product.id}`)).status, 200); }
         await call(`/media/ticket/${product.id}`, outsider, {}, "POST", 403);
         await call(`/seller/products/${product.id}/WITHDRAW`, seller, {});
     });
 }
+await check("missing input fields return validation errors", async () => {
+    await call("/checkout", buyer, {}, "POST", 400);
+    await call("/activity", buyer, {}, "PUT", 400);
+    await call("/tickets", buyer, {}, "POST", 400);
+    await call("/seller/products", seller, {}, "POST", 400);
+});
+await check("blocking prevents inquiries while preserving reporting", async () => {
+    await call("/activity", outsider, { kind: "BLOCK", targetId: "seller", content: "", numberValue: 0 }, "PUT");
+    await call("/tickets", outsider, { kind: "INQUIRY", targetId: "video-1", message: "Blocked inquiry" }, "POST", 403);
+    await call("/tickets", outsider, { kind: "REPORT", targetId: "video-1", message: "QA report despite block" });
+});
 console.log(JSON.stringify({ passed: results.length, checks: results }, null, 2));

@@ -72,8 +72,20 @@ public class OperationsService {
                 "tickets", mTickets.findAll().stream().filter(ticket -> (content && ticket.getKind().equals("REPORT"))
                         || (support && List.of("SUPPORT", "REFUND").contains(ticket.getKind()))).map(mCommunity::describeTicket).toList(),
                 "lines", finance ? mLines.findAll().stream().map(mCommerce::describeLine).toList() : List.of(),
+                "adjustments", finance ? mAdjustments.findAll().stream().map(item -> Map.of("lineId", item.getLineId(),
+                        "sellerId", item.getSellerId(), "amountWon", item.getAmountWon(), "settlementId", item.getSettlementId())).toList() : List.of(),
                 "audits", operator.getRole().equals("ADMIN") ? mAudits.findAll().stream().map(audit -> Map.of("id", audit.getId(),
                         "actorId", audit.getActorId(), "action", audit.getAction(), "targetId", audit.getTargetId(), "detail", audit.getDetail(), "createdAt", audit.getCreatedAt())).toList() : List.of());
+    }
+
+    public Map<String, Object> getSellerSettlementSummary(String sellerId) {
+        int adjustmentWon = mAdjustments.findPending(sellerId, "").stream().mapToInt(RefundAdjustment::getAmountWon).sum();
+        int unsettledWon = mLines.findAll().stream().filter(line -> line.getSellerId().equals(sellerId)
+                && !line.isRefunded() && line.getSettlementId().isEmpty()).mapToInt(OrderLine::getSellerAmountWon).sum();
+        List<Settlement> settlements = mSettlements.findAll().stream().filter(item -> item.getSellerId().equals(sellerId)).toList();
+        return Map.of("pendingWon", unsettledWon - adjustmentWon, "adjustmentWon", adjustmentWon,
+                "paidWon", settlements.stream().mapToInt(Settlement::getAmountWon).sum(),
+                "settlements", settlements.stream().map(item -> Map.of("id", item.getId(), "amountWon", item.getAmountWon(), "createdAt", item.getCreatedAt())).toList());
     }
 
     @Transactional
