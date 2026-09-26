@@ -11,20 +11,37 @@ import { AdminScreen } from "./src/screens/AdminScreen";
 function CurrentScreen() {
     const { route } = useStore();
     switch (route) {
-        case "login": return <AuthScreen />;
-        case "detail": return <DetailScreen />;
-        case "seller": return <SellerScreen />;
-        case "cart": return <CartScreen />;
-        case "library": return <LibraryScreen />;
-        case "orders": return <OrdersScreen />;
-        case "inbox": return <InboxScreen />;
-        case "settings": return <SettingsScreen />;
-        case "studio": return <StudioScreen />;
-        case "admin": return <AdminScreen />;
-        default: return <DiscoverScreen />;
+        case "login":
+            return <AuthScreen />;
+        case "detail":
+            return <DetailScreen />;
+        case "seller":
+            return <SellerScreen />;
+        case "cart":
+            return <CartScreen />;
+        case "library":
+            return <LibraryScreen />;
+        case "orders":
+            return <OrdersScreen />;
+        case "inbox":
+            return <InboxScreen />;
+        case "settings":
+            return <SettingsScreen />;
+        case "studio":
+            return <StudioScreen />;
+        case "admin":
+            return <AdminScreen />;
+        default:
+            return <DiscoverScreen />;
     }
 }
 
 export default function App() {
-    return <StoreProvider><AppShell><CurrentScreen /></AppShell></StoreProvider>;
+    return (
+        <StoreProvider>
+            <AppShell>
+                <CurrentScreen />
+            </AppShell>
+        </StoreProvider>
+    );
 }

@@ -9,6 +9,7 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "accounts")
 public class Account {
+
     @Id
     @Column(name = "id", length = 64)
     private String mId;
@@ -45,7 +46,17 @@ public class Account {
         // Required by JPA; application code uses the complete constructor.
     }
 
-    public Account(String id, String email, String passwordHash, String displayName, String role, String sellerStatus, String bio, String language, String interests) {
+    public Account(
+        String id,
+        String email,
+        String passwordHash,
+        String displayName,
+        String role,
+        String sellerStatus,
+        String bio,
+        String language,
+        String interests
+    ) {
         mId = id;
         mEmail = email;
         mPasswordHash = passwordHash;
@@ -57,20 +68,67 @@ public class Account {
         mInterests = interests;
     }
 
-    public String getId() { return mId; }
-    public String getEmail() { return mEmail; }
-    public String getPasswordHash() { return mPasswordHash; }
-    public String getDisplayName() { return mDisplayName; }
-    public String getRole() { return mRole; }
-    public String getSellerStatus() { return mSellerStatus; }
-    public String getBio() { return mBio; }
-    public String getLanguage() { return mLanguage; }
-    public String getInterests() { return mInterests; }
+    public String getId() {
+        return mId;
+    }
 
-    public void approveSeller() { mSellerStatus = "APPROVED"; }
-    public void applySeller(String displayName, String bio) { mDisplayName = displayName; mBio = bio; mSellerStatus = "PENDING"; }
-    public void rejectSeller() { mSellerStatus = "REJECTED"; }
-    public void changeSettings(String language, String interests) { mLanguage = language; mInterests = interests; }
-    public void changeRole(String role) { mRole = role; }
-    public void changeProfile(String displayName, String bio) { mDisplayName = displayName; mBio = bio; }
+    public String getEmail() {
+        return mEmail;
+    }
+
+    public String getPasswordHash() {
+        return mPasswordHash;
+    }
+
+    public String getDisplayName() {
+        return mDisplayName;
+    }
+
+    public String getRole() {
+        return mRole;
+    }
+
+    public String getSellerStatus() {
+        return mSellerStatus;
+    }
+
+    public String getBio() {
+        return mBio;
+    }
+
+    public String getLanguage() {
+        return mLanguage;
+    }
+
+    public String getInterests() {
+        return mInterests;
+    }
+
+    public void approveSeller() {
+        mSellerStatus = "APPROVED";
+    }
+
+    public void applySeller(String displayName, String bio) {
+        mDisplayName = displayName;
+        mBio = bio;
+        mSellerStatus = "PENDING";
+    }
+
+    public void rejectSeller() {
+        mSellerStatus = "REJECTED";
+    }
+
+    public void changeSettings(String language, String interests) {
+        mLanguage = language;
+        mInterests = interests;
+    }
+
+    public void changeRole(String role) {
+        mRole = role;
+    }
+
+    public void changeProfile(String displayName, String bio) {
+        mDisplayName = displayName;
+        mBio = bio;
+    }
 }

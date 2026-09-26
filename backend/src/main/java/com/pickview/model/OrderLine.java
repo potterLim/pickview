@@ -9,6 +9,7 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "order_lines")
 public class OrderLine {
+
     @Id
     @Column(name = "id", length = 64)
     private String mId;
@@ -57,7 +58,21 @@ public class OrderLine {
         // Required by JPA; application code uses the complete constructor.
     }
 
-    public OrderLine(String id, String purchaseId, String buyerId, String sellerId, String productId, String title, int priceWon, int channelFeeWon, int platformFeeWon, int sellerAmountWon, int termDays, boolean refunded, String settlementId) {
+    public OrderLine(
+        String id,
+        String purchaseId,
+        String buyerId,
+        String sellerId,
+        String productId,
+        String title,
+        int priceWon,
+        int channelFeeWon,
+        int platformFeeWon,
+        int sellerAmountWon,
+        int termDays,
+        boolean refunded,
+        String settlementId
+    ) {
         mId = id;
         mPurchaseId = purchaseId;
         mBuyerId = buyerId;
@@ -73,20 +88,63 @@ public class OrderLine {
         mSettlementId = settlementId;
     }
 
-    public String getId() { return mId; }
-    public String getPurchaseId() { return mPurchaseId; }
-    public String getBuyerId() { return mBuyerId; }
-    public String getSellerId() { return mSellerId; }
-    public String getProductId() { return mProductId; }
-    public String getTitle() { return mTitle; }
-    public int getPriceWon() { return mPriceWon; }
-    public int getChannelFeeWon() { return mChannelFeeWon; }
-    public int getPlatformFeeWon() { return mPlatformFeeWon; }
-    public int getSellerAmountWon() { return mSellerAmountWon; }
-    public int getTermDays() { return mTermDays; }
-    public boolean isRefunded() { return mIsRefunded; }
-    public String getSettlementId() { return mSettlementId; }
+    public String getId() {
+        return mId;
+    }
 
-    public void refund() { mIsRefunded = true; }
-    public void settle(String settlementId) { mSettlementId = settlementId; }
+    public String getPurchaseId() {
+        return mPurchaseId;
+    }
+
+    public String getBuyerId() {
+        return mBuyerId;
+    }
+
+    public String getSellerId() {
+        return mSellerId;
+    }
+
+    public String getProductId() {
+        return mProductId;
+    }
+
+    public String getTitle() {
+        return mTitle;
+    }
+
+    public int getPriceWon() {
+        return mPriceWon;
+    }
+
+    public int getChannelFeeWon() {
+        return mChannelFeeWon;
+    }
+
+    public int getPlatformFeeWon() {
+        return mPlatformFeeWon;
+    }
+
+    public int getSellerAmountWon() {
+        return mSellerAmountWon;
+    }
+
+    public int getTermDays() {
+        return mTermDays;
+    }
+
+    public boolean isRefunded() {
+        return mIsRefunded;
+    }
+
+    public String getSettlementId() {
+        return mSettlementId;
+    }
+
+    public void refund() {
+        mIsRefunded = true;
+    }
+
+    public void settle(String settlementId) {
+        mSettlementId = settlementId;
+    }
 }

@@ -15,19 +15,27 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 public class BearerFilter extends OncePerRequestFilter {
+
     private final AccountService mAccounts;
 
-    public BearerFilter(AccountService accounts) { mAccounts = accounts; }
+    public BearerFilter(AccountService accounts) {
+        mAccounts = accounts;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-            throws ServletException, IOException {
+        throws ServletException, IOException {
         String authorizationOrNull = request.getHeader("Authorization");
         if (authorizationOrNull != null && authorizationOrNull.startsWith("Bearer ")) {
             Account accountOrNull = mAccounts.authenticateOrNull(authorizationOrNull.substring(7));
             if (accountOrNull != null) {
-                SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
-                        accountOrNull.getId(), null, List.of(new SimpleGrantedAuthority("ROLE_" + accountOrNull.getRole()))));
+                SecurityContextHolder.getContext().setAuthentication(
+                    new UsernamePasswordAuthenticationToken(
+                        accountOrNull.getId(),
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_" + accountOrNull.getRole()))
+                    )
+                );
             }
         }
         chain.doFilter(request, response);

@@ -9,6 +9,7 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "refund_adjustments")
 public class RefundAdjustment {
+
     @Id
     @Column(name = "line_id", length = 64)
     private String mLineId;
@@ -37,9 +38,23 @@ public class RefundAdjustment {
         mSettlementId = "";
     }
 
-    public String getLineId() { return mLineId; }
-    public String getSellerId() { return mSellerId; }
-    public int getAmountWon() { return mAmountWon; }
-    public String getSettlementId() { return mSettlementId; }
-    public void settle(String settlementId) { mSettlementId = settlementId; }
+    public String getLineId() {
+        return mLineId;
+    }
+
+    public String getSellerId() {
+        return mSellerId;
+    }
+
+    public int getAmountWon() {
+        return mAmountWon;
+    }
+
+    public String getSettlementId() {
+        return mSettlementId;
+    }
+
+    public void settle(String settlementId) {
+        mSettlementId = settlementId;
+    }
 }

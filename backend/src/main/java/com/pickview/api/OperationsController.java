@@ -5,23 +5,31 @@ import com.pickview.security.AccountService;
 import java.security.Principal;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class OperationsController {
+
     private final OperationsService mOperations;
     private final AccountService mAccounts;
 
-    public OperationsController(OperationsService operations, AccountService accounts) { mOperations = operations; mAccounts = accounts; }
+    public OperationsController(OperationsService operations, AccountService accounts) {
+        mOperations = operations;
+        mAccounts = accounts;
+    }
 
     @GetMapping("/api/admin/dashboard")
-    public Map<String, Object> getDashboard(Principal principal) { return mOperations.getDashboard(mAccounts.requireAccount(principal.getName())); }
+    public Map<String, Object> getDashboard(Principal principal) {
+        return mOperations.getDashboard(mAccounts.requireAccount(principal.getName()));
+    }
 
     @GetMapping("/api/seller/settlements")
-    public Map<String, Object> getSellerSettlements(Principal principal) { return mOperations.getSellerSettlementSummary(principal.getName()); }
+    public Map<String, Object> getSellerSettlements(Principal principal) {
+        return mOperations.getSellerSettlementSummary(principal.getName());
+    }
 
     @PostMapping("/api/admin/sellers/{id}")
     public void reviewSeller(Principal principal, @PathVariable String id, @RequestBody DecisionRequest request) {
@@ -35,7 +43,12 @@ public class OperationsController {
 
     @PostMapping("/api/admin/tickets/{id}")
     public void resolveTicket(Principal principal, @PathVariable String id, @RequestBody DecisionRequest request) {
-        mOperations.resolveTicket(mAccounts.requireAccount(principal.getName()), id, request.reply(), request.approve());
+        mOperations.resolveTicket(
+            mAccounts.requireAccount(principal.getName()),
+            id,
+            request.reply(),
+            request.approve()
+        );
     }
 
     @PostMapping("/api/admin/roles/{id}")

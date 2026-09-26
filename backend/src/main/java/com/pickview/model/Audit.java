@@ -9,6 +9,7 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "audits")
 public class Audit {
+
     @Id
     @Column(name = "id", length = 64)
     private String mId;
@@ -45,10 +46,27 @@ public class Audit {
         mCreatedAt = createdAt;
     }
 
-    public String getId() { return mId; }
-    public String getActorId() { return mActorId; }
-    public String getAction() { return mAction; }
-    public String getTargetId() { return mTargetId; }
-    public String getDetail() { return mDetail; }
-    public long getCreatedAt() { return mCreatedAt; }
+    public String getId() {
+        return mId;
+    }
+
+    public String getActorId() {
+        return mActorId;
+    }
+
+    public String getAction() {
+        return mAction;
+    }
+
+    public String getTargetId() {
+        return mTargetId;
+    }
+
+    public String getDetail() {
+        return mDetail;
+    }
+
+    public long getCreatedAt() {
+        return mCreatedAt;
+    }
 }

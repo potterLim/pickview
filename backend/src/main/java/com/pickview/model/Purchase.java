@@ -9,6 +9,7 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "purchases")
 public class Purchase {
+
     @Id
     @Column(name = "id", length = 64)
     private String mId;
@@ -45,12 +46,31 @@ public class Purchase {
         mCreatedAt = createdAt;
     }
 
-    public String getId() { return mId; }
-    public String getBuyerId() { return mBuyerId; }
-    public String getRequestKey() { return mRequestKey; }
-    public String getStatus() { return mStatus; }
-    public String getChannel() { return mChannel; }
-    public long getCreatedAt() { return mCreatedAt; }
+    public String getId() {
+        return mId;
+    }
 
-    public void refund() { mStatus = "REFUNDED"; }
+    public String getBuyerId() {
+        return mBuyerId;
+    }
+
+    public String getRequestKey() {
+        return mRequestKey;
+    }
+
+    public String getStatus() {
+        return mStatus;
+    }
+
+    public String getChannel() {
+        return mChannel;
+    }
+
+    public long getCreatedAt() {
+        return mCreatedAt;
+    }
+
+    public void refund() {
+        mStatus = "REFUNDED";
+    }
 }

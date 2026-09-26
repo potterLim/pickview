@@ -9,6 +9,7 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "tickets")
 public class Ticket {
+
     @Id
     @Column(name = "id", length = 64)
     private String mId;
@@ -45,7 +46,17 @@ public class Ticket {
         // Required by JPA; application code uses the complete constructor.
     }
 
-    public Ticket(String id, String userId, String targetId, String recipientId, String kind, String message, String status, String reply, long createdAt) {
+    public Ticket(
+        String id,
+        String userId,
+        String targetId,
+        String recipientId,
+        String kind,
+        String message,
+        String status,
+        String reply,
+        long createdAt
+    ) {
         mId = id;
         mUserId = userId;
         mTargetId = targetId;
@@ -57,15 +68,44 @@ public class Ticket {
         mCreatedAt = createdAt;
     }
 
-    public String getId() { return mId; }
-    public String getUserId() { return mUserId; }
-    public String getTargetId() { return mTargetId; }
-    public String getRecipientId() { return mRecipientId; }
-    public String getKind() { return mKind; }
-    public String getMessage() { return mMessage; }
-    public String getStatus() { return mStatus; }
-    public String getReply() { return mReply; }
-    public long getCreatedAt() { return mCreatedAt; }
+    public String getId() {
+        return mId;
+    }
 
-    public void resolve(String reply, String status) { mReply = reply; mStatus = status; }
+    public String getUserId() {
+        return mUserId;
+    }
+
+    public String getTargetId() {
+        return mTargetId;
+    }
+
+    public String getRecipientId() {
+        return mRecipientId;
+    }
+
+    public String getKind() {
+        return mKind;
+    }
+
+    public String getMessage() {
+        return mMessage;
+    }
+
+    public String getStatus() {
+        return mStatus;
+    }
+
+    public String getReply() {
+        return mReply;
+    }
+
+    public long getCreatedAt() {
+        return mCreatedAt;
+    }
+
+    public void resolve(String reply, String status) {
+        mReply = reply;
+        mStatus = status;
+    }
 }

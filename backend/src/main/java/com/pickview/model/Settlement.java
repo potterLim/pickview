@@ -9,6 +9,7 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "settlements")
 public class Settlement {
+
     @Id
     @Column(name = "id", length = 64)
     private String mId;
@@ -37,8 +38,19 @@ public class Settlement {
         mCreatedAt = createdAt;
     }
 
-    public String getId() { return mId; }
-    public String getSellerId() { return mSellerId; }
-    public int getAmountWon() { return mAmountWon; }
-    public long getCreatedAt() { return mCreatedAt; }
+    public String getId() {
+        return mId;
+    }
+
+    public String getSellerId() {
+        return mSellerId;
+    }
+
+    public int getAmountWon() {
+        return mAmountWon;
+    }
+
+    public long getCreatedAt() {
+        return mCreatedAt;
+    }
 }

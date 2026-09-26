@@ -9,6 +9,7 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "engagements")
 public class Engagement {
+
     @Id
     @Column(name = "id", length = 64)
     private String mId;
@@ -39,7 +40,15 @@ public class Engagement {
         // Required by JPA; application code uses the complete constructor.
     }
 
-    public Engagement(String id, String userId, String targetId, String kind, String content, double numberValue, long updatedAt) {
+    public Engagement(
+        String id,
+        String userId,
+        String targetId,
+        String kind,
+        String content,
+        double numberValue,
+        long updatedAt
+    ) {
         mId = id;
         mUserId = userId;
         mTargetId = targetId;
@@ -49,13 +58,37 @@ public class Engagement {
         mUpdatedAt = updatedAt;
     }
 
-    public String getId() { return mId; }
-    public String getUserId() { return mUserId; }
-    public String getTargetId() { return mTargetId; }
-    public String getKind() { return mKind; }
-    public String getContent() { return mContent; }
-    public double getNumberValue() { return mNumberValue; }
-    public long getUpdatedAt() { return mUpdatedAt; }
+    public String getId() {
+        return mId;
+    }
 
-    public void revise(String content, double numberValue, long now) { mContent = content; mNumberValue = numberValue; mUpdatedAt = now; }
+    public String getUserId() {
+        return mUserId;
+    }
+
+    public String getTargetId() {
+        return mTargetId;
+    }
+
+    public String getKind() {
+        return mKind;
+    }
+
+    public String getContent() {
+        return mContent;
+    }
+
+    public double getNumberValue() {
+        return mNumberValue;
+    }
+
+    public long getUpdatedAt() {
+        return mUpdatedAt;
+    }
+
+    public void revise(String content, double numberValue, long now) {
+        mContent = content;
+        mNumberValue = numberValue;
+        mUpdatedAt = now;
+    }
 }

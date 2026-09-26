@@ -1,6 +1,7 @@
 package com.pickview.api;
 
 public class ApiFailure extends RuntimeException {
+
     private final int mStatus;
 
     public ApiFailure(int status, String message) {
@@ -8,5 +9,7 @@ public class ApiFailure extends RuntimeException {
         mStatus = status;
     }
 
-    public int getStatus() { return mStatus; }
+    public int getStatus() {
+        return mStatus;
+    }
 }

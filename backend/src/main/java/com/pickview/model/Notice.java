@@ -9,6 +9,7 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "notices")
 public class Notice {
+
     @Id
     @Column(name = "id", length = 64)
     private String mId;
@@ -41,11 +42,27 @@ public class Notice {
         mCreatedAt = createdAt;
     }
 
-    public String getId() { return mId; }
-    public String getUserId() { return mUserId; }
-    public String getMessage() { return mMessage; }
-    public boolean isRead() { return mIsRead; }
-    public long getCreatedAt() { return mCreatedAt; }
+    public String getId() {
+        return mId;
+    }
 
-    public void markRead() { mIsRead = true; }
+    public String getUserId() {
+        return mUserId;
+    }
+
+    public String getMessage() {
+        return mMessage;
+    }
+
+    public boolean isRead() {
+        return mIsRead;
+    }
+
+    public long getCreatedAt() {
+        return mCreatedAt;
+    }
+
+    public void markRead() {
+        mIsRead = true;
+    }
 }

@@ -9,6 +9,7 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "products")
 public class Product {
+
     @Id
     @Column(name = "id", length = 64)
     private String mId;
@@ -69,7 +70,24 @@ public class Product {
         // Required by JPA; application code uses the complete constructor.
     }
 
-    public Product(String id, String sellerId, String title, String description, String category, int priceWon, int termDays, String status, String thumbnail, String mediaKey, String previewKey, double durationSeconds, String kind, String bundleIds, boolean blocked, long createdAt) {
+    public Product(
+        String id,
+        String sellerId,
+        String title,
+        String description,
+        String category,
+        int priceWon,
+        int termDays,
+        String status,
+        String thumbnail,
+        String mediaKey,
+        String previewKey,
+        double durationSeconds,
+        String kind,
+        String bundleIds,
+        boolean blocked,
+        long createdAt
+    ) {
         mId = id;
         mSellerId = sellerId;
         mTitle = title;
@@ -88,31 +106,114 @@ public class Product {
         mCreatedAt = createdAt;
     }
 
-    public String getId() { return mId; }
-    public String getSellerId() { return mSellerId; }
-    public String getTitle() { return mTitle; }
-    public String getDescription() { return mDescription; }
-    public String getCategory() { return mCategory; }
-    public int getPriceWon() { return mPriceWon; }
-    public int getTermDays() { return mTermDays; }
-    public String getStatus() { return mStatus; }
-    public String getThumbnail() { return mThumbnail; }
-    public String getTags() { return mTags; }
-    public void changeTags(String tags) { mTags = tags; }
-    public String getMediaKey() { return mMediaKey; }
-    public String getPreviewKey() { return mPreviewKey; }
-    public double getDurationSeconds() { return mDurationSeconds; }
-    public String getKind() { return mKind; }
-    public String getBundleIds() { return mBundleIds; }
-    public boolean isBlocked() { return mIsBlocked; }
-    public long getCreatedAt() { return mCreatedAt; }
+    public String getId() {
+        return mId;
+    }
 
-    public void publish() { mStatus = "APPROVED"; }
-    public void reject() { mStatus = "REJECTED"; }
-    public void withdraw() { mStatus = "WITHDRAWN"; }
-    public void submit() { mStatus = "PENDING"; }
-    public void block() { mIsBlocked = true; }
-    public void revise(String title, String description, int priceWon, int termDays) { mTitle = title; mDescription = description; mPriceWon = priceWon; mTermDays = termDays; }
-    public void changePresentation(String category, String thumbnail) { mCategory = category; mThumbnail = thumbnail; }
-    public void replaceMedia(String mediaKey, String previewKey, double durationSeconds) { mMediaKey = mediaKey; mPreviewKey = previewKey; mDurationSeconds = durationSeconds; mStatus = "PENDING"; }
+    public String getSellerId() {
+        return mSellerId;
+    }
+
+    public String getTitle() {
+        return mTitle;
+    }
+
+    public String getDescription() {
+        return mDescription;
+    }
+
+    public String getCategory() {
+        return mCategory;
+    }
+
+    public int getPriceWon() {
+        return mPriceWon;
+    }
+
+    public int getTermDays() {
+        return mTermDays;
+    }
+
+    public String getStatus() {
+        return mStatus;
+    }
+
+    public String getThumbnail() {
+        return mThumbnail;
+    }
+
+    public String getTags() {
+        return mTags;
+    }
+
+    public void changeTags(String tags) {
+        mTags = tags;
+    }
+
+    public String getMediaKey() {
+        return mMediaKey;
+    }
+
+    public String getPreviewKey() {
+        return mPreviewKey;
+    }
+
+    public double getDurationSeconds() {
+        return mDurationSeconds;
+    }
+
+    public String getKind() {
+        return mKind;
+    }
+
+    public String getBundleIds() {
+        return mBundleIds;
+    }
+
+    public boolean isBlocked() {
+        return mIsBlocked;
+    }
+
+    public long getCreatedAt() {
+        return mCreatedAt;
+    }
+
+    public void publish() {
+        mStatus = "APPROVED";
+    }
+
+    public void reject() {
+        mStatus = "REJECTED";
+    }
+
+    public void withdraw() {
+        mStatus = "WITHDRAWN";
+    }
+
+    public void submit() {
+        mStatus = "PENDING";
+    }
+
+    public void block() {
+        mIsBlocked = true;
+    }
+
+    public void revise(String title, String description, int priceWon, int termDays) {
+        mTitle = title;
+        mDescription = description;
+        mPriceWon = priceWon;
+        mTermDays = termDays;
+    }
+
+    public void changePresentation(String category, String thumbnail) {
+        mCategory = category;
+        mThumbnail = thumbnail;
+    }
+
+    public void replaceMedia(String mediaKey, String previewKey, double durationSeconds) {
+        mMediaKey = mediaKey;
+        mPreviewKey = previewKey;
+        mDurationSeconds = durationSeconds;
+        mStatus = "PENDING";
+    }
 }

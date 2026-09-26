@@ -9,6 +9,7 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "login_sessions")
 public class LoginSession {
+
     @Id
     @Column(name = "id", length = 64)
     private String mId;
@@ -37,8 +38,19 @@ public class LoginSession {
         mExpiresAt = expiresAt;
     }
 
-    public String getId() { return mId; }
-    public String getUserId() { return mUserId; }
-    public String getTokenHash() { return mTokenHash; }
-    public long getExpiresAt() { return mExpiresAt; }
+    public String getId() {
+        return mId;
+    }
+
+    public String getUserId() {
+        return mUserId;
+    }
+
+    public String getTokenHash() {
+        return mTokenHash;
+    }
+
+    public long getExpiresAt() {
+        return mExpiresAt;
+    }
 }

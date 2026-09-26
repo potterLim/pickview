@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Profile;
 @Configuration
 @Profile("local")
 public class LocalServerConfiguration {
+
     @Bean
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> configureLocalConnector() {
         // NIO2 avoids the JDK 25 Windows Unix-domain selector loopback failure.

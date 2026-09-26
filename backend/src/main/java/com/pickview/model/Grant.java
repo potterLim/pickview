@@ -9,6 +9,7 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "grants")
 public class Grant {
+
     @Id
     @Column(name = "id", length = 64)
     private String mId;
@@ -45,13 +46,35 @@ public class Grant {
         mIsRevoked = revoked;
     }
 
-    public String getId() { return mId; }
-    public String getBuyerId() { return mBuyerId; }
-    public String getProductId() { return mProductId; }
-    public String getLineId() { return mLineId; }
-    public long getExpiresAt() { return mExpiresAt; }
-    public boolean isRevoked() { return mIsRevoked; }
+    public String getId() {
+        return mId;
+    }
 
-    public boolean isValid(long now) { return !mIsRevoked && (mExpiresAt == 0 || mExpiresAt > now); }
-    public void revoke() { mIsRevoked = true; }
+    public String getBuyerId() {
+        return mBuyerId;
+    }
+
+    public String getProductId() {
+        return mProductId;
+    }
+
+    public String getLineId() {
+        return mLineId;
+    }
+
+    public long getExpiresAt() {
+        return mExpiresAt;
+    }
+
+    public boolean isRevoked() {
+        return mIsRevoked;
+    }
+
+    public boolean isValid(long now) {
+        return !mIsRevoked && (mExpiresAt == 0 || mExpiresAt > now);
+    }
+
+    public void revoke() {
+        mIsRevoked = true;
+    }
 }
