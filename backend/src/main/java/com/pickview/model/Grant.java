@@ -30,7 +30,7 @@ public class Grant {
     private long mExpiresAt;
 
     @Column(name = "revoked", nullable = false)
-    private boolean mRevoked;
+    private boolean mIsRevoked;
 
     protected Grant() {
         // Required by JPA; application code uses the complete constructor.
@@ -42,7 +42,7 @@ public class Grant {
         mProductId = productId;
         mLineId = lineId;
         mExpiresAt = expiresAt;
-        mRevoked = revoked;
+        mIsRevoked = revoked;
     }
 
     public String getId() { return mId; }
@@ -50,8 +50,8 @@ public class Grant {
     public String getProductId() { return mProductId; }
     public String getLineId() { return mLineId; }
     public long getExpiresAt() { return mExpiresAt; }
-    public boolean isRevoked() { return mRevoked; }
+    public boolean isRevoked() { return mIsRevoked; }
 
-    public boolean isValid(long now) { return !mRevoked && (mExpiresAt == 0 || mExpiresAt > now); }
-    public void revoke() { mRevoked = true; }
+    public boolean isValid(long now) { return !mIsRevoked && (mExpiresAt == 0 || mExpiresAt > now); }
+    public void revoke() { mIsRevoked = true; }
 }

@@ -24,7 +24,7 @@ public class Notice {
     private String mMessage;
 
     @Column(name = "read", nullable = false)
-    private boolean mRead;
+    private boolean mIsRead;
 
     @Column(name = "created_at", nullable = false)
     private long mCreatedAt;
@@ -37,15 +37,15 @@ public class Notice {
         mId = id;
         mUserId = userId;
         mMessage = message;
-        mRead = read;
+        mIsRead = read;
         mCreatedAt = createdAt;
     }
 
     public String getId() { return mId; }
     public String getUserId() { return mUserId; }
     public String getMessage() { return mMessage; }
-    public boolean isRead() { return mRead; }
+    public boolean isRead() { return mIsRead; }
     public long getCreatedAt() { return mCreatedAt; }
 
-    public void markRead() { mRead = true; }
+    public void markRead() { mIsRead = true; }
 }

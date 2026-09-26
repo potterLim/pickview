@@ -60,7 +60,7 @@ public class Product {
     private String mBundleIds;
 
     @Column(name = "blocked", nullable = false)
-    private boolean mBlocked;
+    private boolean mIsBlocked;
 
     @Column(name = "created_at", nullable = false)
     private long mCreatedAt;
@@ -84,7 +84,7 @@ public class Product {
         mDurationSeconds = durationSeconds;
         mKind = kind;
         mBundleIds = bundleIds;
-        mBlocked = blocked;
+        mIsBlocked = blocked;
         mCreatedAt = createdAt;
     }
 
@@ -104,14 +104,14 @@ public class Product {
     public double getDurationSeconds() { return mDurationSeconds; }
     public String getKind() { return mKind; }
     public String getBundleIds() { return mBundleIds; }
-    public boolean isBlocked() { return mBlocked; }
+    public boolean isBlocked() { return mIsBlocked; }
     public long getCreatedAt() { return mCreatedAt; }
 
     public void publish() { mStatus = "APPROVED"; }
     public void reject() { mStatus = "REJECTED"; }
     public void withdraw() { mStatus = "WITHDRAWN"; }
     public void submit() { mStatus = "PENDING"; }
-    public void block() { mBlocked = true; }
+    public void block() { mIsBlocked = true; }
     public void revise(String title, String description, int priceWon, int termDays) { mTitle = title; mDescription = description; mPriceWon = priceWon; mTermDays = termDays; }
     public void changePresentation(String category, String thumbnail) { mCategory = category; mThumbnail = thumbnail; }
     public void replaceMedia(String mediaKey, String previewKey, double durationSeconds) { mMediaKey = mediaKey; mPreviewKey = previewKey; mDurationSeconds = durationSeconds; mStatus = "PENDING"; }

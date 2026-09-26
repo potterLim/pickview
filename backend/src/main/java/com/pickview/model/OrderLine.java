@@ -48,7 +48,7 @@ public class OrderLine {
     private int mTermDays;
 
     @Column(name = "refunded", nullable = false)
-    private boolean mRefunded;
+    private boolean mIsRefunded;
 
     @Column(name = "settlement_id", nullable = false, length = 12000)
     private String mSettlementId;
@@ -69,7 +69,7 @@ public class OrderLine {
         mPlatformFeeWon = platformFeeWon;
         mSellerAmountWon = sellerAmountWon;
         mTermDays = termDays;
-        mRefunded = refunded;
+        mIsRefunded = refunded;
         mSettlementId = settlementId;
     }
 
@@ -84,9 +84,9 @@ public class OrderLine {
     public int getPlatformFeeWon() { return mPlatformFeeWon; }
     public int getSellerAmountWon() { return mSellerAmountWon; }
     public int getTermDays() { return mTermDays; }
-    public boolean isRefunded() { return mRefunded; }
+    public boolean isRefunded() { return mIsRefunded; }
     public String getSettlementId() { return mSettlementId; }
 
-    public void refund() { mRefunded = true; }
+    public void refund() { mIsRefunded = true; }
     public void settle(String settlementId) { mSettlementId = settlementId; }
 }
