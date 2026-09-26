@@ -2,11 +2,11 @@ import { useEffect, useState, useRef } from "react";
 import { Text, View, useWindowDimensions } from "react-native";
 import { request } from "../core/api";
 import { useStore } from "../core/Store";
-import type { IOrder } from "../core/types";
+import type { IOrder, ITicket } from "../core/types";
 import { durationLabel, statusLabel } from "../core/presentation";
-import { Button, Empty, Field } from "../ui/Controls";
+import { Button, Empty, Field, Loading } from "../ui/Controls";
 import { ProductCard, ProductArtwork } from "../ui/ProductCard";
-import { money, styles } from "../ui/theme";
+import { colors, money, styles } from "../ui/theme";
 
 export function CartScreen() {
     const { activity, products, token, t, run, busy, refresh, navigate, toggle } = useStore();
@@ -72,7 +72,7 @@ export function CartScreen() {
                     <View style={styles.between}><Text style={styles.muted}>{t("선택한 상품", "Selected items")}</Text><Text style={styles.text}>{cart.length}</Text></View>
                     <View style={styles.divider} /><View style={styles.between}><Text style={styles.text}>{t("총 결제 금액", "Total")}</Text><Text style={[styles.price, { fontSize: 28 }]}>{money(total)}</Text></View>
                     {result ? <View accessibilityRole="alert" style={{ gap: 5 }}><Text style={{ color: "#BA3856" }}>{t(result.status === "FAILED" ? "결제 실패" : "결제 취소", result.status === "FAILED" ? "Payment failed" : "Payment canceled")}</Text><Text style={styles.muted}>{t("결제되지 않았어요. 장바구니는 그대로 유지됩니다. 정상 결제로 바꾸고 다시 시도해보세요.", "No charge was made. Your cart is saved. Select Success to try again.")}</Text></View> : null}
-                    <Button label={t(`${money(total)} 모의 결제하기`, `${money(total)} · Complete demo purchase`)} disabled={busy} onPress={() => run(checkout)} />
+                    <Button fullWidth label={t(`${money(total)} 모의 결제하기`, `${money(total)} · Complete demo purchase`)} disabled={busy} onPress={() => run(checkout)} />
                     <Text style={styles.muted}>{t("구매 즉시 시청 · 자동 갱신 없음", "Watch immediately · No auto-renewal")}</Text>
                 </View>
             </View>}
@@ -102,25 +102,51 @@ function WatchProgress({ seconds, duration }: { seconds: number; duration: numbe
 }
 
 export function OrdersScreen() {
-    const { token, t, language, run, notify } = useStore();
+    const { token, t, language, run, busy, notify, navigate } = useStore();
     const [orders, setOrders] = useState<IOrder[]>([]);
+    const [tickets, setTickets] = useState<ITicket[]>([]);
+    const [selectedLine, setSelectedLine] = useState("");
     const [reason, setReason] = useState("");
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    async function loadOrders(signal?: AbortSignal) {
+        const [newOrders, newTickets] = await Promise.all([
+            request<IOrder[]>("/orders", token, "GET", undefined, signal), request<ITicket[]>("/tickets", token, "GET", undefined, signal),
+        ]);
+        if (signal?.aborted) { return; }
+        setOrders(newOrders); setTickets(newTickets); setError(""); setLoading(false);
+    }
     useEffect(() => {
         const controller = new AbortController();
-        request<IOrder[]>("/orders", token, "GET", undefined, controller.signal).then(setOrders).catch(error => { if (!controller.signal.aborted) { notify(error.message); } });
+        loadOrders(controller.signal).catch(() => { if (!controller.signal.aborted) { setError(t("주문 내역을 불러오지 못했어요.", "Couldn't load your orders.")); setLoading(false); } });
         return () => controller.abort();
     }, [token]);
-    async function refund(id: string) {
-        await request("/tickets", token, "POST", { kind: "REFUND", targetId: id, message: reason || t("미재생 취소 요청", "Unplayed cancellation request") });
-        notify(t("환불 요청을 접수했어요. 문의함에서 상태를 확인하세요.", "Refund requested. Track it in your inbox."));
+    function openRefund(id: string) { setReason(""); setSelectedLine(id); }
+    async function submitRefund() {
+        await request("/tickets", token, "POST", { kind: "REFUND", targetId: selectedLine, message: reason.trim() });
+        setSelectedLine(""); setReason("");
+        setTickets(await request<ITicket[]>("/tickets", token));
+        notify(t("환불 요청을 접수했어요. 문의함에서 처리 상태를 확인할 수 있습니다.", "Refund request received. Track its status in your inbox."));
     }
-    return <View style={styles.page}><Text style={styles.title}>{t("주문 내역", "Your orders")}</Text>
-        <Field label={t("환불 요청 사유", "Refund reason")} value={reason} onChangeText={setReason} />
-        {!orders.length ? <Empty title={t("아직 주문이 없어요.", "No orders yet.")} /> : null}
-        {orders.slice().reverse().map(order => <View key={order.id} style={styles.panel}><View style={styles.between}>
-            <Text style={styles.muted}>{new Date(order.createdAt).toLocaleString()} · {order.id.slice(0, 8)}</Text><Text style={styles.badge}>{statusLabel(order.status, language)}</Text></View>
-            {order.lines.map(line => <View key={line.id} style={styles.between}><Text style={[styles.text, { flex: 1 }]}>{line.title}</Text><Text style={styles.price}>{money(line.priceWon)}</Text>
-                {line.refunded ? <Text style={styles.muted}>{t("환불 완료", "Refunded")}</Text> : order.status === "SUCCESS" ? <Button secondary label={t("환불 요청", "Request refund")} onPress={() => run(() => refund(line.id))} /> : null}</View>)}
-            <Text style={styles.heading}>{money(order.totalWon)}</Text></View>)}
+    return <View style={[styles.page, { maxWidth: 980, width: "100%" }]}>
+        <View style={{ gap: 8 }}><Text style={styles.title}>{t("주문 내역", "Your orders")}</Text><Text style={styles.subtitle}>{t("구매한 영상과 결제 내역을 확인하세요.", "Review your purchases and payment history.")}</Text></View>
+        {loading ? <Loading /> : error ? <View style={styles.panel}><Text style={styles.text}>{error}</Text><Button secondary label={t("다시 시도", "Try again")} disabled={busy} onPress={() => run(() => loadOrders())} /></View>
+            : !orders.length ? <Empty title={t("아직 주문이 없어요.", "No orders yet.")} description={t("마음에 드는 영상을 구매하면 이곳에 모아드릴게요.", "Your purchases will appear here.")} /> : null}
+        {orders.slice().sort((a, b) => b.createdAt - a.createdAt).map(order => <View key={order.id} style={[styles.panel, { gap: 20 }]}>
+            <View style={styles.between}><View style={{ gap: 4 }}><Text style={styles.sectionTitle}>{new Date(order.createdAt).toLocaleDateString(language === "ko" ? "ko-KR" : "en-US")}</Text><Text style={styles.muted}>{t("주문", "Order")} {order.id.slice(0, 8)} · {order.channel === "CARD" ? t("카드", "Card") : t("간편결제", "Easy pay")} · {t("데모 결제", "Demo payment")}</Text></View><Text style={styles.badge}>{statusLabel(order.status, language)}</Text></View>
+            {order.lines.map(line => {
+                const pending = tickets.some(ticket => ticket.kind === "REFUND" && ticket.targetId === line.id && ticket.status === "OPEN");
+                return <View key={line.id} style={{ gap: 16, paddingTop: 16, borderTopWidth: 1, borderColor: colors.line }}>
+                    <View style={styles.between}><View style={{ flex: 1, minWidth: 150, gap: 6 }}><Text style={[styles.text, { fontWeight: "600" }]}>{line.title}</Text><Text style={styles.muted}>{line.termDays ? t(`${line.termDays}일 이용`, `${line.termDays} days of access`) : t("기간 제한 없음", "Unlimited access")}</Text></View><Text style={[styles.text, { fontWeight: "600" }]}>{money(line.priceWon)}</Text></View>
+                    <View style={styles.actionRow}>{line.refunded ? <Text style={styles.badge}>{t("환불 완료", "Refunded")}</Text> : pending ? <><Text style={styles.muted}>{t("환불 요청 검토 중", "Refund request in review")}</Text><Button quiet compact label={t("문의함에서 확인", "View in inbox")} onPress={() => navigate("inbox")} /></> : order.status === "SUCCESS" && selectedLine !== line.id ? <Button quiet compact label={t("환불 요청", "Request refund")} disabled={busy} onPress={() => openRefund(line.id)} /> : null}</View>
+                    {selectedLine === line.id ? <View style={{ backgroundColor: "#F8F7FC", borderRadius: 12, padding: 20, gap: 16 }}>
+                        <View style={{ gap: 6 }}><Text style={styles.sectionTitle}>{t("환불을 요청하시겠어요?", "Request a refund?")}</Text><Text style={styles.muted}>{t("이 상품의 환불 사유를 알려주세요. 요청을 제출하면 운영자가 검토하며, 즉시 환불되지는 않습니다.", "Tell us why you'd like a refund for this item. Your request will be reviewed; submitting it does not issue an immediate refund.")}</Text></View>
+                        <Field label={t("환불 요청 사유", "Refund reason")} placeholder={t("환불을 요청하는 이유를 적어주세요.", "Tell us why you'd like a refund.")} value={reason} onChangeText={setReason} multiline maxLength={2000} autoFocus />
+                        <View style={styles.actionRow}><Button secondary label={t("취소", "Cancel")} disabled={busy} onPress={() => { setSelectedLine(""); setReason(""); }} /><Button loading={busy} label={t("환불 요청 제출", "Submit refund request")} disabled={busy || !reason.trim()} onPress={() => run(submitRefund)} /></View>
+                    </View> : null}
+                </View>;
+            })}
+            <View style={[styles.between, { paddingTop: 16, borderTopWidth: 1, borderColor: colors.line }]}><Text style={styles.muted}>{order.status === "SUCCESS" ? t("주문 당시 결제 금액", "Original order total") : t("결제되지 않았습니다", "No payment was made")}</Text><Text style={styles.sectionTitle}>{money(order.totalWon)}</Text></View>
+        </View>)}
     </View>;
 }

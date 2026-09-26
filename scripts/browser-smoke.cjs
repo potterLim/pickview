@@ -43,6 +43,22 @@ async function checkOverflow(page, width, height) {
         await page.getByText('좋은 선택이에요. 이제 만나볼까요?', { exact: true }).waitFor();
         await page.getByRole('button', { name: '라이브러리로 이동', exact: true }).click();
         await page.getByText('나의 취향으로 채운 작은 세계', { exact: true }).waitFor();
+        await page.getByRole('button', { name: '주문 내역', exact: true }).click();
+        const refundReason = page.getByRole('textbox', { name: '환불 요청 사유', exact: true });
+        await page.getByRole('button', { name: '환불 요청', exact: true }).waitFor();
+        assert.equal(await refundReason.count(), 0, 'Order history must not open the refund form');
+        await page.getByRole('button', { name: '환불 요청', exact: true }).click();
+        assert.equal(await page.getByRole('button', { name: '환불 요청 제출', exact: true }).isDisabled(), true);
+        await refundReason.fill('Accidental demo purchase');
+        await page.getByRole('button', { name: '취소', exact: true }).click();
+        assert.equal(await refundReason.count(), 0);
+        await page.getByRole('button', { name: '환불 요청', exact: true }).click();
+        assert.equal(await refundReason.inputValue(), '', 'Canceled reasons must not leak into a new request');
+        await refundReason.fill('Accidental demo purchase');
+        await page.getByRole('button', { name: '환불 요청 제출', exact: true }).click();
+        await page.getByText('환불 요청 검토 중', { exact: true }).waitFor();
+        assert.equal(await page.getByRole('button', { name: '환불 요청', exact: true }).count(), 0);
+        await page.getByRole('button', { name: '내 라이브러리', exact: true }).click();
         await page.getByRole('button', { name: '내 손으로 만드는 첫 번째 도자기', exact: true }).click();
         await page.getByRole('button', { name: '본편 시청', exact: true }).click();
         const video = page.locator('video');
@@ -63,7 +79,7 @@ async function checkOverflow(page, width, height) {
         await page.screenshot({ path: resolve(output, 'tablet.png') });
         await checkOverflow(page, 1440, 1000);
         await page.getByRole('button', { name: 'Settings', exact: true }).click();
-        await page.getByRole('button', { name: '한국어', exact: true }).click();
+        await page.getByRole('radio', { name: '한국어', exact: true }).click();
         await page.getByRole('button', { name: '로그아웃', exact: true }).click();
         await login(page, 'admin@pickview.demo');
         await page.getByRole('button', { name: '운영 관리', exact: true }).click();
@@ -73,6 +89,6 @@ async function checkOverflow(page, width, height) {
         await page.waitForFunction(() => document.querySelector('video')?.currentTime > 1);
         await page.screenshot({ path: resolve(output, 'moderation.png') });
         assert.deepEqual(errors, []);
-        console.log('PASS browser registration, cart, purchase, playback, seek, speed, locale, responsive layout, account switch and moderation');
+        console.log('PASS browser registration, cart, purchase, explicit refund request, playback, seek, speed, locale, responsive layout, account switch and moderation');
     } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
