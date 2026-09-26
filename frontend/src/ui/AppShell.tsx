@@ -101,6 +101,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                         <Pressable
                             accessibilityRole="button"
                             accessibilityLabel="Change language"
+                            style={{ minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}
                             onPress={() => setLanguage(language === "ko" ? "en" : "ko")}
                         >
                             <Text style={{ color: colors.violet, fontWeight: "700" }}>
@@ -111,7 +112,13 @@ export function AppShell({ children }: { children: ReactNode }) {
                             accessibilityRole="button"
                             accessibilityLabel={t("장바구니", "Cart")}
                             onPress={() => navigate("cart")}
-                            style={{ padding: 7 }}
+                            style={{
+                                padding: 7,
+                                minWidth: 44,
+                                minHeight: 44,
+                                alignItems: "center",
+                                justifyContent: "center",
+                            }}
                         >
                             <Ionicons name="cart-outline" size={26} color={colors.ink} />
                             {cartCount ? (
@@ -133,7 +140,13 @@ export function AppShell({ children }: { children: ReactNode }) {
                                 accessibilityRole="button"
                                 accessibilityLabel={user ? t("내 계정", "Account") : t("로그인", "Sign in")}
                                 onPress={() => navigate(user ? "settings" : "login")}
-                                style={{ padding: 8 }}
+                                style={{
+                                    padding: 8,
+                                    minWidth: 44,
+                                    minHeight: 44,
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                }}
                             >
                                 <Ionicons name="person-circle-outline" size={27} color={colors.violet} />
                             </Pressable>
@@ -170,7 +183,13 @@ export function AppShell({ children }: { children: ReactNode }) {
                             accessibilityRole="button"
                             accessibilityLabel={t("알림 닫기", "Dismiss notification")}
                             onPress={() => notify("")}
-                            style={{ padding: 8 }}
+                            style={{
+                                padding: 8,
+                                minWidth: 44,
+                                minHeight: 44,
+                                alignItems: "center",
+                                justifyContent: "center",
+                            }}
                         >
                             <Ionicons name="close" size={22} color={colors.violet} />
                         </Pressable>
@@ -222,11 +241,14 @@ function NavItem({ item, compact = false }: { item: (typeof navigation)[number];
         <Pressable
             accessibilityRole="button"
             accessibilityLabel={t(item.ko, item.en)}
+            accessibilityState={{ selected: active }}
             onPress={() => navigate(item.route)}
             style={{
                 flexDirection: compact ? "column" : "row",
                 gap: compact ? 4 : 17,
                 padding: compact ? 5 : 14,
+                minHeight: 44,
+                flex: compact ? 1 : undefined,
                 borderRadius: 12,
                 backgroundColor: active ? colors.pale : "white",
                 alignItems: "center",
@@ -240,7 +262,13 @@ function NavItem({ item, compact = false }: { item: (typeof navigation)[number];
                     fontWeight: active ? "700" : "500",
                 }}
             >
-                {t(item.ko, item.en)}
+                {compact && item.route === "library"
+                    ? t("라이브러리", "Library")
+                    : compact && item.route === "studio"
+                      ? t("스튜디오", "Studio")
+                      : compact && item.route === "inbox"
+                        ? t("문의·알림", "Inbox")
+                        : t(item.ko, item.en)}
             </Text>
         </Pressable>
     );
