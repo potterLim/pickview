@@ -11,7 +11,8 @@ export const thumbnails: Record<string, ImageSourcePropType> = {
 
 export function ProductCard({ product, width }: { product: IProduct; width: number | `${number}%` }) {
     const { navigate, t, language } = useStore();
-    const title = language === "en" ? product.description.split("\n")[0] : product.title;
+    const title = language === "en" && /^video-[1-6]$/.test(product.id) ? product.description.split("\n")[0] : product.title;
+    const duration = `${Math.floor(product.durationSeconds / 60).toString().padStart(2, "0")}:${Math.floor(product.durationSeconds % 60).toString().padStart(2, "0")}`;
     return <Pressable accessibilityRole="button" accessibilityLabel={product.title} onPress={() => navigate("detail", product)}
         style={({ pressed }) => ({ width, gap: 10, opacity: pressed ? .85 : 1 })}>
         <View style={{ aspectRatio: 16 / 9, borderRadius: 12, overflow: "hidden", backgroundColor: colors.pale }}>
@@ -24,7 +25,7 @@ export function ProductCard({ product, width }: { product: IProduct; width: numb
                 <Ionicons name={product.kind === "BUNDLE" ? "layers" : "play"} size={22} color="white" />
             </View>
             <Text style={{ position: "absolute", right: 8, bottom: 8, backgroundColor: "#20202ACC", color: "white", padding: 5, fontSize: 11, borderRadius: 5 }}>
-                {product.kind === "BUNDLE" ? `${product.videoIds.length} ${t("편", "videos")}` : t("데모 00:30", "Demo 00:30")}
+                {product.kind === "BUNDLE" ? `${product.videoIds.length} ${t("편", "videos")}` : duration}
             </Text>
         </View>
         <Text style={styles.muted}>{product.sellerName}</Text>

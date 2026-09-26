@@ -1,6 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { request } from "./api";
+import { ApiError, request } from "./api";
 import type { IActivity, ILibraryItem, IProduct, IUser, Language, Route } from "./types";
 
 interface IStore {
@@ -30,21 +30,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const [selected, setSelected] = useState<IProduct | null>(null);
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState("");
+    const refreshController = useRef<AbortController | null>(null);
     const t = (ko: string, en: string) => language === "ko" ? ko : en;
 
     const refresh = useCallback(async () => {
-        const catalog = await request<IProduct[]>("/public/products", "");
-        setProducts(catalog);
-        if (token) {
+        refreshController.current?.abort();
+        const controller = new AbortController();
+        refreshController.current = controller;
+        const signal = controller.signal;
+        try {
+            const catalog = await request<IProduct[]>("/public/products", "", "GET", undefined, signal);
+            if (signal.aborted) { return; }
+            setProducts(catalog);
+            if (!token) { setUser(null); setActivity([]); setLibrary([]); return; }
             const [currentUser, currentActivity, currentLibrary] = await Promise.all([
-                request<IUser>("/me", token), request<IActivity[]>("/activity", token), request<ILibraryItem[]>("/library", token),
+                request<IUser>("/me", token, "GET", undefined, signal),
+                request<IActivity[]>("/activity", token, "GET", undefined, signal),
+                request<ILibraryItem[]>("/library", token, "GET", undefined, signal),
             ]);
+            if (signal.aborted) { return; }
             setUser(currentUser); setActivity(currentActivity); setLibrary(currentLibrary);
-        } else { setUser(null); setActivity([]); setLibrary([]); }
+        } catch (error) {
+            if (signal.aborted) { return; }
+            if (error instanceof ApiError && error.status === 401) {
+                await AsyncStorage.removeItem("pickview.token");
+                setToken(""); setUser(null); setActivity([]); setLibrary([]); setRoute("login");
+            }
+            throw error;
+        }
     }, [token]);
 
     useEffect(() => { AsyncStorage.getItem("pickview.token").then(value => setToken(value ?? "")).catch(() => setMessage("Session storage unavailable")); }, []);
-    useEffect(() => { refresh().catch(error => setMessage(String(error.message))); }, [refresh]);
+    useEffect(() => {
+        refresh().catch(error => setMessage(String(error.message)));
+        return () => refreshController.current?.abort();
+    }, [refresh]);
     useEffect(() => {
         if (!message) { return; }
         const timer = setTimeout(() => setMessage(""), 7000);
@@ -56,10 +76,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const isPublic = ["discover", "detail", "seller", "login"].includes(next);
         setRoute(!token && !isPublic ? "login" : next);
     }
-    async function signIn(next: string) { await AsyncStorage.setItem("pickview.token", next); setToken(next); setRoute("discover"); }
+    async function signIn(next: string) {
+        refreshController.current?.abort();
+        await AsyncStorage.setItem("pickview.token", next);
+        setUser(null); setActivity([]); setLibrary([]); setToken(next); setRoute("discover");
+    }
     async function signOut() {
-        await request("/auth/logout", token, "POST");
-        await AsyncStorage.removeItem("pickview.token"); setToken(""); setUser(null); setRoute("discover");
+        refreshController.current?.abort();
+        try { await request("/auth/logout", token, "POST"); }
+        finally {
+            await AsyncStorage.removeItem("pickview.token");
+            setToken(""); setUser(null); setActivity([]); setLibrary([]); setSelected(null); setRoute("discover");
+        }
     }
     async function run(action: () => Promise<void>) {
         if (busy) { return; }
