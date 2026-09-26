@@ -6,10 +6,11 @@ import { API_URL, request } from "../core/api";
 import type { IOrderLine, IProduct, ISettlementSummary } from "../core/types";
 import { Button, Field } from "../ui/Controls";
 import { money, styles } from "../ui/theme";
+import { statusLabel } from "../core/presentation";
 import { InspectionPlayer } from "../ui/InspectionPlayer";
 
 export function StudioScreen() {
-    const { user, token, t, run, refresh, notify } = useStore();
+    const { user, token, t, language, run, refresh, notify } = useStore();
     const [products, setProducts] = useState<IProduct[]>([]);
     const [sales, setSales] = useState<IOrderLine[]>([]);
     const [settlement, setSettlement] = useState<ISettlementSummary | null>(null);
@@ -27,7 +28,7 @@ export function StudioScreen() {
     if (user?.sellerStatus !== "APPROVED") {
         return <View style={styles.page}><Text style={styles.title}>{t("나의 영상을 세상에", "Share what you know")}</Text><View style={styles.panel}>
             <Text style={styles.subtitle}>{t("개인과 기업 모두 크리에이터가 될 수 있어요.", "A home for individual and business creators.")}</Text>
-            <Text style={styles.badge}>{user?.sellerStatus}</Text><Field label={t("채널 이름", "Channel name")} value={displayName} onChangeText={setDisplayName} />
+            <Text style={styles.badge}>{statusLabel(user?.sellerStatus ?? "NONE", language)}</Text><Field label={t("채널 이름", "Channel name")} value={displayName} onChangeText={setDisplayName} />
             <Field label={t("채널 소개", "About your channel")} value={bio} onChangeText={setBio} multiline />
             <View style={styles.row}>{["PERSONAL", "BUSINESS"].map(value => <Button key={value} label={value} secondary={type !== value} onPress={() => setType(value)} />)}</View>
             <Button label={t("판매자 신청", "Apply to sell")} onPress={() => run(async () => { await request("/seller/apply", token, "POST", { displayName, bio, type }); await refresh(); notify(t("심사 요청을 보냈어요.", "Application submitted.")); })} /></View></View>;
@@ -49,7 +50,7 @@ export function StudioScreen() {
         {showEditor ? <ProductEditor key={editing?.id ?? "new"} product={editing} products={products} onDone={async () => { setShowEditor(false); await reload(); await refresh(); }} /> : null}
         <Text style={styles.heading}>{t("내 콘텐츠", "Your content")}</Text>
         {products.map(product => <View key={product.id} style={[styles.panel, styles.between]}><View style={{ flex: 1, gap: 6 }}><Text style={styles.heading}>{product.title}</Text>
-            <Text style={styles.muted}>{product.kind} · {money(product.priceWon)} · {product.termDays || "∞"}{t("일", " days")}</Text></View><Text style={styles.badge}>{product.status}</Text>
+            <Text style={styles.muted}>{statusLabel(product.kind, language)} · {money(product.priceWon)} · {product.termDays || "∞"}{t("일", " days")}</Text></View><Text style={styles.badge}>{statusLabel(product.status, language)}</Text>
             <Button secondary label={t("수정", "Edit")} onPress={() => { setEditing(product); setShowEditor(true); }} />
             <Button secondary label={t("검수 요청", "Submit review")} onPress={() => run(async () => { await request(`/seller/products/${product.id}/SUBMIT`, token, "POST"); await reload(); })} />
             <Button secondary label={t("판매 중단", "Withdraw")} onPress={() => run(async () => { await request(`/seller/products/${product.id}/WITHDRAW`, token, "POST"); await reload(); await refresh(); })} />

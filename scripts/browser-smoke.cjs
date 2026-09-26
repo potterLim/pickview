@@ -2,7 +2,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 const { mkdirSync } = require('node:fs');
 const { resolve } = require('node:path');
 const assert = require('node:assert/strict');
-const output = resolve(__dirname, '../docs/qa/screenshots');
+const output = resolve(process.env.QA_OUTPUT_DIR ?? require('node:os').tmpdir(), 'pickview-browser-qa');
 
 async function login(page, email) {
     await page.getByRole('button', { name: '로그인', exact: true }).click();
@@ -37,9 +37,11 @@ async function checkOverflow(page, width, height) {
         await page.getByRole('button', { name: '내 계정', exact: true }).waitFor();
         await page.getByRole('button', { name: '내 손으로 만드는 첫 번째 도자기', exact: true }).click();
         await page.getByRole('button', { name: '장바구니 담기', exact: true }).click();
-        await page.getByRole('button', { name: '장바구니에서 빼기', exact: true }).waitFor();
+        await page.getByRole('button', { name: '장바구니로 이동', exact: true }).waitFor();
         await page.getByRole('button', { name: '장바구니', exact: true }).click();
-        await page.getByRole('button', { name: '모의 결제하기', exact: true }).click();
+        await page.getByRole('button', { name: /모의 결제하기$/ }).click();
+        await page.getByText('좋은 선택이에요. 이제 만나볼까요?', { exact: true }).waitFor();
+        await page.getByRole('button', { name: '라이브러리로 이동', exact: true }).click();
         await page.getByText('나의 취향으로 채운 작은 세계', { exact: true }).waitFor();
         await page.getByRole('button', { name: '내 손으로 만드는 첫 번째 도자기', exact: true }).click();
         await page.getByRole('button', { name: '본편 시청', exact: true }).click();

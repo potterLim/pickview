@@ -3,60 +3,113 @@ import { Text, View, useWindowDimensions } from "react-native";
 import { request } from "../core/api";
 import { useStore } from "../core/Store";
 import type { IOrder } from "../core/types";
+import { durationLabel, statusLabel } from "../core/presentation";
 import { Button, Empty, Field } from "../ui/Controls";
-import { ProductCard } from "../ui/ProductCard";
+import { ProductCard, ProductArtwork } from "../ui/ProductCard";
 import { money, styles } from "../ui/theme";
 
 export function CartScreen() {
-    const { activity, products, token, t, run, busy, refresh, navigate, toggle, notify } = useStore();
+    const { activity, products, token, t, run, busy, refresh, navigate, toggle } = useStore();
+    const { width } = useWindowDimensions();
     const [channel, setChannel] = useState("CARD");
     const [outcome, setOutcome] = useState("SUCCESS");
-    const requestKey = useRef("");
+    const [showScenarios, setShowScenarios] = useState(false);
+    const [result, setResult] = useState<IOrder | null>(null);
+    const requestKey = useRef({ fingerprint: "", key: "" });
     const cart = products.filter(product => activity.some(item => item.kind === "CART" && item.targetId === product.id));
     const total = cart.reduce((amount, product) => amount + product.priceWon, 0);
     async function checkout() {
-        if (!requestKey.current) { requestKey.current = `web-${Date.now()}-${Math.random().toString(36).slice(2)}`; }
-        const order = await request<IOrder>("/checkout", token, "POST", { productIds: cart.map(product => product.id), requestKey: requestKey.current, channel, outcome });
-        requestKey.current = "";
+        const productIds = cart.map(product => product.id).sort();
+        const fingerprint = JSON.stringify({ productIds, channel, outcome });
+        if (requestKey.current.fingerprint !== fingerprint) {
+            requestKey.current = { fingerprint, key: `demo-${Date.now()}-${Math.random().toString(36).slice(2)}` };
+        }
+        const order = await request<IOrder>("/checkout", token, "POST", { productIds, requestKey: requestKey.current.key, channel, outcome });
+        setResult(order);
+        requestKey.current = { fingerprint: "", key: "" };
         if (order.status === "SUCCESS") {
             await Promise.all(cart.map(product => request(`/activity/CART/${product.id}`, token, "DELETE")));
-            await refresh(); notify(t("구매 완료! 라이브러리에서 시청하세요.", "Purchase complete. Enjoy your library.")); navigate("library");
-        } else { notify(t(`모의 결제 결과: ${order.status}. 결제되지 않았습니다.`, `Mock result: ${order.status}. No charge.`)); }
+            await refresh();
+        }
     }
-    return <View style={styles.page}><Text style={styles.title}>{t("장바구니", "Your cart")}</Text>
-        {!cart.length ? <Empty title={t("장바구니가 비어 있어요.", "Your cart is empty.")} /> : <>
-            {cart.map(product => <View style={[styles.panel, styles.between]} key={product.id}><View style={{ flex: 1 }}><Text style={styles.heading}>{product.title}</Text>
-                <Text style={styles.muted}>{product.sellerName} · {product.termDays || "∞"}{t("일", " days")}</Text></View>
-                <Text style={styles.price}>{money(product.priceWon)}</Text><Button secondary label={t("삭제", "Remove")} onPress={() => run(() => toggle("CART", product.id))} /></View>)}
-            <View style={styles.panel}><Text style={styles.heading}>{t("모의 결제", "Mock checkout")}</Text>
-                <Text style={styles.subtitle}>{t("실제 결제되지 않습니다. 카드정보를 입력하지 마세요.", "No real payment. Do not enter card details.")}</Text>
-                <View style={styles.row}>{[["CARD", "카드", "Card"], ["EASY", "간편결제", "Easy pay"]].map(([value, ko, en]) =>
-                    <Button key={value} secondary={channel !== value} label={t(ko!, en!)} onPress={() => { setChannel(value!); requestKey.current = ""; }} />)}</View>
-                <View style={styles.row}>{["SUCCESS", "FAILED", "CANCELED"].map(value => <Button key={value} secondary={outcome !== value} label={value} onPress={() => { setOutcome(value); requestKey.current = ""; }} />)}</View>
-                <View style={styles.between}><Text style={styles.heading}>{t("합계", "Total")}</Text><Text style={styles.price}>{money(total)}</Text></View>
-                <Button label={t("모의 결제하기", "Complete mock purchase")} disabled={busy} onPress={() => run(checkout)} />
-            </View></>}
+    if (result?.status === "SUCCESS") {
+        return <View style={[styles.page, { maxWidth: 800, width: "100%", alignSelf: "center", paddingTop: 24 }]}>
+            <View style={{ alignSelf: "center", padding: 22, borderRadius: 48, backgroundColor: "#F4F1FE" }}><Text style={{ fontSize: 36, color: "#7256E8" }}>✓</Text></View>
+            <Text style={[styles.title, { textAlign: "center" }]}>{t("좋은 선택이에요. 이제 만나볼까요?", "Great choice. Make yourself comfortable.")}</Text>
+            <Text style={[styles.subtitle, { textAlign: "center" }]}>{t("구매한 영상을 라이브러리에 담았어요. 실제로 청구된 금액은 없습니다.", "Your videos are in your library. No real money was charged.")}</Text>
+            <View style={styles.panel}>{result.lines.map(line => <View key={line.id} style={styles.between}><Text style={[styles.text, { flex: 1 }]}>{line.title}</Text><Text style={styles.price}>{money(line.priceWon)}</Text></View>)}
+                <View style={styles.divider} /><View style={styles.between}><Text style={styles.text}>{t("모의 결제 금액", "Demo total")}</Text><Text style={styles.price}>{money(result.totalWon)}</Text></View>
+                <Text style={styles.muted}>{t("주문 번호", "Order")} · {result.id.slice(0, 8)}</Text>
+            </View>
+            <Button label={t("라이브러리로 이동", "Go to your library")} icon="play-outline" onPress={() => navigate("library")} />
+            <Button secondary label={t("다른 영상 둘러보기", "Keep exploring")} onPress={() => navigate("discover")} />
+        </View>;
+    }
+    return <View style={styles.page}><Text style={styles.title}>{t("좋아하는 영상이 기다리고 있어요.", "Your next discovery is waiting.")}</Text>
+        <Text style={styles.subtitle}>{t("구독 없이, 마음에 드는 영상만. 구매 후 라이브러리에서 만나요.", "Just the videos you want. Ready in your library after purchase.")}</Text>
+        {!cart.length ? <><Empty title={t("장바구니가 비어 있어요.", "Your cart is empty.")} /><Button secondary label={t("영상 둘러보기", "Explore videos")} onPress={() => navigate("discover")} /></> :
+            <View style={{ flexDirection: width >= 1120 ? "row" : "column", gap: 28, alignItems: "flex-start" }}>
+                <View style={{ flex: width >= 1120 ? 1 : undefined, width: width >= 1120 ? undefined : "100%", gap: 24 }}>
+                    <View style={styles.panel}><Text style={styles.heading}>{t(`선택한 영상 ${cart.length}개`, `${cart.length} selections`)}</Text>
+                        {cart.map(product => <View style={[styles.row, { paddingVertical: 14, borderTopWidth: 1, borderTopColor: "#EDECF2" }]} key={product.id}>
+                            <View style={{ width: width < 500 ? 90 : 145 }}><ProductArtwork product={product} /></View>
+                            <View style={{ flex: 1, minWidth: 110, gap: 5 }}><Text style={[styles.text, { fontWeight: "700" }]}>{product.title}</Text>
+                                <Text style={styles.muted}>{product.sellerName} · {product.termDays ? t(`${product.termDays}일 이용`, `${product.termDays} days`) : t("기간 제한 없음", "Unlimited")}</Text>
+                                <Text style={styles.price}>{money(product.priceWon)}</Text></View>
+                            <Button secondary compact disabled={busy} label={t("삭제", "Remove")} onPress={() => run(() => toggle("CART", product.id))} />
+                        </View>)}
+                    </View>
+                    <View style={styles.panel}><Text style={styles.heading}>{t("결제 수단", "Payment method")}</Text>
+                        <View style={styles.row}>{[["CARD", "카드", "Card"], ["EASY", "간편결제", "Easy pay"]].map(([value, ko, en]) =>
+                            <Button key={value} secondary={channel !== value} disabled={busy} label={`${channel === value ? "✓ " : ""}${t(ko!, en!)}`} onPress={() => { setChannel(value!); setResult(null); }} />)}</View>
+                        <View style={{ padding: 16, backgroundColor: "#F4F1FE", borderRadius: 12, gap: 6 }}><Text style={[styles.text, { fontWeight: "600" }]}>{t("안심하고 체험하는 데모 결제", "A checkout you can safely try")}</Text>
+                            <Text style={styles.muted}>{t("실제 결제나 카드 정보 입력 없이 구매 과정을 체험합니다.", "Try the purchase flow without card details or real charges.")}</Text></View>
+                        <Button secondary compact label={t(showScenarios ? "결제 시나리오 닫기" : "다른 결제 결과 체험", showScenarios ? "Hide scenarios" : "Try other payment outcomes")} onPress={() => setShowScenarios(!showScenarios)} />
+                        {showScenarios ? <View style={styles.row}>{[["SUCCESS", "정상 결제", "Success"], ["FAILED", "실패", "Failure"], ["CANCELED", "취소", "Cancel"]].map(([value, ko, en]) => <Button key={value} compact secondary={outcome !== value} disabled={busy} label={t(ko!, en!)} onPress={() => { setOutcome(value!); setResult(null); }} />)}</View> : null}
+                    </View>
+                </View>
+                <View style={[styles.panel, { width: width >= 1120 ? 320 : "100%" }]}><Text style={styles.heading}>{t("결제 요약", "Order summary")}</Text>
+                    <View style={styles.between}><Text style={styles.muted}>{t("선택한 상품", "Selected items")}</Text><Text style={styles.text}>{cart.length}</Text></View>
+                    <View style={styles.divider} /><View style={styles.between}><Text style={styles.text}>{t("총 결제 금액", "Total")}</Text><Text style={[styles.price, { fontSize: 28 }]}>{money(total)}</Text></View>
+                    {result ? <View accessibilityRole="alert" style={{ gap: 5 }}><Text style={{ color: "#BA3856" }}>{t(result.status === "FAILED" ? "결제 실패" : "결제 취소", result.status === "FAILED" ? "Payment failed" : "Payment canceled")}</Text><Text style={styles.muted}>{t("결제되지 않았어요. 장바구니는 그대로 유지됩니다. 정상 결제로 바꾸고 다시 시도해보세요.", "No charge was made. Your cart is saved. Select Success to try again.")}</Text></View> : null}
+                    <Button label={t(`${money(total)} 모의 결제하기`, `${money(total)} · Complete demo purchase`)} disabled={busy} onPress={() => run(checkout)} />
+                    <Text style={styles.muted}>{t("구매 즉시 시청 · 자동 갱신 없음", "Watch immediately · No auto-renewal")}</Text>
+                </View>
+            </View>}
     </View>;
 }
 
 export function LibraryScreen() {
     const { library, t, activity } = useStore();
     const { width } = useWindowDimensions();
-    const items = library.filter((item, index, list) => list.findIndex(other => other.product.id === item.product.id && other.active === item.active) === index);
+    const ordered = library.slice().sort((first, second) => Number(second.active) - Number(first.active));
+    const items = ordered.filter((item, index, list) => list.findIndex(other => other.product.id === item.product.id) === index);
     return <View style={styles.page}><Text style={styles.title}>{t("내 라이브러리", "Your library")}</Text><Text style={styles.subtitle}>{t("나의 취향으로 채운 작은 세계", "A collection made for your curiosity.")}</Text>
         {!items.length ? <Empty title={t("첫 번째 영상을 골라보세요.", "Find your first video.")} /> : null}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 24 }}>{items.map(item => <View key={item.id} style={{ width: width < 700 ? "100%" : "47%", gap: 12 }}>
             <ProductCard product={item.product} width="100%" />
             <Text style={styles.badge}>{!item.active ? t("이용 기간 만료", "Expired") : item.expiresAt ? `${t("이용 기한", "Available until")}: ${new Date(item.expiresAt).toLocaleDateString()}` : t("기간 제한 없음", "Unlimited")}</Text>
-            <Text style={styles.muted}>{t("이어보기", "Resume")}: {Math.round(activity.find(entry => entry.kind === "PROGRESS" && entry.targetId === item.product.id)?.numberValue ?? 0)}s</Text>
+            <WatchProgress seconds={activity.find(entry => entry.kind === "PROGRESS" && entry.targetId === item.product.id)?.numberValue ?? 0} duration={item.product.durationSeconds} />
         </View>)}</View></View>;
 }
 
+function WatchProgress({ seconds, duration }: { seconds: number; duration: number }) {
+    const { t } = useStore();
+    const progress = Math.min(100, Math.max(0, seconds / Math.max(1, duration) * 100));
+    return <View style={{ gap: 8 }}><View accessibilityRole="progressbar" accessibilityLabel={t("시청 진행률", "Watch progress")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)} style={{ height: 4, backgroundColor: "#EDECF2", borderRadius: 4, overflow: "hidden" }}>
+        <View style={{ height: 4, width: `${progress}%`, backgroundColor: "#7256E8" }} /></View>
+        <Text style={styles.muted}>{seconds >= duration && duration > 0 ? t("시청 완료", "Finished") : seconds > 0 ? t("이어보기", "Continue watching") : t("아직 시청하지 않았어요", "Ready to watch")} · {durationLabel(seconds)} / {durationLabel(duration)}</Text></View>;
+}
+
 export function OrdersScreen() {
-    const { token, t, run, notify } = useStore();
+    const { token, t, language, run, notify } = useStore();
     const [orders, setOrders] = useState<IOrder[]>([]);
     const [reason, setReason] = useState("");
-    useEffect(() => { request<IOrder[]>("/orders", token).then(setOrders).catch(error => notify(error.message)); }, [token]);
+    useEffect(() => {
+        const controller = new AbortController();
+        request<IOrder[]>("/orders", token, "GET", undefined, controller.signal).then(setOrders).catch(error => { if (!controller.signal.aborted) { notify(error.message); } });
+        return () => controller.abort();
+    }, [token]);
     async function refund(id: string) {
         await request("/tickets", token, "POST", { kind: "REFUND", targetId: id, message: reason || t("미재생 취소 요청", "Unplayed cancellation request") });
         notify(t("환불 요청을 접수했어요. 문의함에서 상태를 확인하세요.", "Refund requested. Track it in your inbox."));
@@ -65,9 +118,9 @@ export function OrdersScreen() {
         <Field label={t("환불 요청 사유", "Refund reason")} value={reason} onChangeText={setReason} />
         {!orders.length ? <Empty title={t("아직 주문이 없어요.", "No orders yet.")} /> : null}
         {orders.slice().reverse().map(order => <View key={order.id} style={styles.panel}><View style={styles.between}>
-            <Text style={styles.muted}>{new Date(order.createdAt).toLocaleString()} · {order.id.slice(0, 8)}</Text><Text style={styles.badge}>{order.status}</Text></View>
+            <Text style={styles.muted}>{new Date(order.createdAt).toLocaleString()} · {order.id.slice(0, 8)}</Text><Text style={styles.badge}>{statusLabel(order.status, language)}</Text></View>
             {order.lines.map(line => <View key={line.id} style={styles.between}><Text style={[styles.text, { flex: 1 }]}>{line.title}</Text><Text style={styles.price}>{money(line.priceWon)}</Text>
-                {line.refunded ? <Text style={styles.muted}>{t("환불 완료", "Refunded")}</Text> : <Button secondary label={t("환불 요청", "Request refund")} onPress={() => run(() => refund(line.id))} />}</View>)}
+                {line.refunded ? <Text style={styles.muted}>{t("환불 완료", "Refunded")}</Text> : order.status === "SUCCESS" ? <Button secondary label={t("환불 요청", "Request refund")} onPress={() => run(() => refund(line.id))} /> : null}</View>)}
             <Text style={styles.heading}>{money(order.totalWon)}</Text></View>)}
     </View>;
 }

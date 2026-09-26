@@ -5,10 +5,11 @@ import { request } from "../core/api";
 import type { IDashboard } from "../core/types";
 import { Button, Field, Loading } from "../ui/Controls";
 import { money, styles } from "../ui/theme";
+import { statusLabel } from "../core/presentation";
 import { InspectionPlayer } from "../ui/InspectionPlayer";
 
 export function AdminScreen() {
-    const { token, user, t, run, refresh, notify } = useStore();
+    const { token, user, t, language, run, refresh, notify } = useStore();
     const [dashboard, setDashboard] = useState<IDashboard | null>(null);
     const [reply, setReply] = useState("");
     const [sellerId, setSellerId] = useState("seller");
@@ -25,14 +26,14 @@ export function AdminScreen() {
                 <Button label={t("판매자 승인", "Approve seller")} onPress={() => run(() => decide(`/admin/sellers/${account.id}`, { approve: true }))} />
                 <Button secondary label={t("반려", "Reject")} onPress={() => run(() => decide(`/admin/sellers/${account.id}`, { approve: false }))} /></View></View>)}
         {dashboard.products.length ? <Text style={styles.heading}>{t("콘텐츠 검수", "Content review")}</Text> : null}
-        {dashboard.products.map(product => <View style={[styles.panel, styles.between]} key={product.id}><View style={{ flex: 1 }}><Text style={styles.text}>{product.title}</Text><Text style={styles.muted}>{product.sellerName} · {product.status}</Text></View>
+        {dashboard.products.map(product => <View style={[styles.panel, styles.between]} key={product.id}><View style={{ flex: 1 }}><Text style={styles.text}>{product.title}</Text><Text style={styles.muted}>{product.sellerName} · {statusLabel(product.status, language)}</Text></View>
             <Button label={t("승인", "Approve")} onPress={() => run(() => decide(`/admin/products/${product.id}`, { decision: "APPROVE" }))} />
             <Button secondary label={t("반려", "Reject")} onPress={() => run(() => decide(`/admin/products/${product.id}`, { decision: "REJECT" }))} />
             <Button secondary label={t("제공 중단", "Block access")} onPress={() => run(() => decide(`/admin/products/${product.id}`, { decision: "BLOCK" }))} />
             {product.kind === "VIDEO" && product.durationSeconds > 0 ? <InspectionPlayer productId={product.id} /> : null}</View>)}
         <Text style={styles.heading}>{t("신고 · 고객지원 · 환불", "Reports · Support · Refunds")}</Text>
         <Field label={t("처리 답변", "Resolution message")} value={reply} onChangeText={setReply} multiline />
-        {dashboard.tickets.map(ticket => <View style={styles.panel} key={ticket.id}><View style={styles.between}><Text style={styles.badge}>{ticket.kind} · {ticket.status}</Text><Text style={styles.muted}>{ticket.id.slice(0, 8)}</Text></View>
+        {dashboard.tickets.map(ticket => <View style={styles.panel} key={ticket.id}><View style={styles.between}><Text style={styles.badge}>{statusLabel(ticket.kind, language)} · {statusLabel(ticket.status, language)}</Text><Text style={styles.muted}>{ticket.id.slice(0, 8)}</Text></View>
             <Text style={styles.text}>{ticket.message}</Text>{ticket.reply ? <Text style={styles.subtitle}>{ticket.reply}</Text> : null}
             {ticket.status === "OPEN" ? <View style={styles.row}><Button label={t("승인 / 처리", "Approve / Resolve")} onPress={() => run(() => decide(`/admin/tickets/${ticket.id}`, { approve: true, reply }))} />
                 <Button secondary label={t("거절", "Reject")} onPress={() => run(() => decide(`/admin/tickets/${ticket.id}`, { approve: false, reply }))} /></View> : null}</View>)}

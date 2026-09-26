@@ -1,32 +1,38 @@
 import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { Text, View, useWindowDimensions } from "react-native";
 import { request } from "../core/api";
 import { useStore } from "../core/Store";
 import type { INotice, ITicket } from "../core/types";
 import { Button, Field } from "../ui/Controls";
 import { ProductCard } from "../ui/ProductCard";
+import { CreatorIdentity } from "../ui/CreatorIdentity";
+import { statusLabel } from "../core/presentation";
 import { styles } from "../ui/theme";
 
 export function SellerScreen() {
     const { selected, products, t, run, toggle, hasActivity } = useStore();
+    const { width } = useWindowDimensions();
     const [bio, setBio] = useState("");
     useEffect(() => {
         if (!selected) { return; }
-        request<{ bio: string }>(`/public/sellers/${selected.sellerId}`, "").then(value => setBio(value.bio)).catch(() => setBio(""));
+        const controller = new AbortController();
+        setBio("");
+        request<{ bio: string }>(`/public/sellers/${selected.sellerId}`, "", "GET", undefined, controller.signal).then(value => setBio(value.bio)).catch(() => { if (!controller.signal.aborted) { setBio(""); } });
+        return () => controller.abort();
     }, [selected?.sellerId]);
     if (!selected) { return null; }
-    return <View style={styles.page}><View style={styles.panel}><Text style={styles.title}>{selected.sellerName}</Text><Text style={styles.subtitle}>{bio}</Text>
+    return <View style={styles.page}><View style={[styles.panel, { backgroundColor: "#FAF8FF", paddingVertical: 32 }]}><CreatorIdentity name={selected.sellerName} size={64} subtitle={t("크리에이터 채널", "Creator channel")} /><Text style={styles.subtitle}>{bio}</Text>
         <View style={styles.row}><Button label={hasActivity("FOLLOW", selected.sellerId) ? t("팔로우 중", "Following") : t("팔로우", "Follow")}
             onPress={() => run(() => toggle("FOLLOW", selected.sellerId))} />
             <Button secondary label={t("신규 영상 알림", "New video alerts") + (hasActivity("NOTIFY", selected.sellerId) ? " ✓" : "")} onPress={() => run(() => toggle("NOTIFY", selected.sellerId))} />
             <Button secondary label={hasActivity("BLOCK", selected.sellerId) ? t("차단 해제", "Unblock") : t("사용자 차단", "Block user")} onPress={() => run(() => toggle("BLOCK", selected.sellerId))} /></View></View>
         <Text style={styles.heading}>{t("이 크리에이터의 영상", "From this creator")}</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 24 }}>{products.filter(product => product.sellerId === selected.sellerId).map(product => <ProductCard key={product.id} product={product} width="100%" />)}</View>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 24 }}>{products.filter(product => product.sellerId === selected.sellerId).map(product => <ProductCard key={product.id} product={product} width={width < 700 ? "100%" : width < 1200 ? "47%" : "31%"} />)}</View>
     </View>;
 }
 
 export function InboxScreen() {
-    const { token, user, t, run, notify } = useStore();
+    const { token, user, t, language, run, notify } = useStore();
     const [tickets, setTickets] = useState<ITicket[]>([]);
     const [notices, setNotices] = useState<INotice[]>([]);
     const [message, setMessage] = useState("");
@@ -41,7 +47,7 @@ export function InboxScreen() {
             {!notice.read ? <Button secondary label={t("읽음", "Mark read")} onPress={() => run(async () => { await request(`/notices/${notice.id}/read`, token, "POST"); await reload(); })} /> : null}</View>)}
         <View style={styles.panel}><Field label={t("고객지원 문의", "Contact support")} value={message} onChangeText={setMessage} multiline />
             <Button label={t("문의 보내기", "Send message")} onPress={() => run(async () => { await request("/tickets", token, "POST", { kind: "SUPPORT", targetId: "", message }); setMessage(""); await reload(); })} /></View>
-        {tickets.slice().reverse().map(ticket => <View key={ticket.id} style={styles.panel}><View style={styles.between}><Text style={styles.label}>{ticket.kind}</Text><Text style={styles.badge}>{ticket.status}</Text></View>
+        {tickets.slice().reverse().map(ticket => <View key={ticket.id} style={styles.panel}><View style={styles.between}><Text style={styles.label}>{statusLabel(ticket.kind, language)}</Text><Text style={styles.badge}>{statusLabel(ticket.status, language)}</Text></View>
             <Text style={styles.text}>{ticket.message}</Text>{ticket.reply ? <Text style={styles.subtitle}>{ticket.reply}</Text> : null}
             {ticket.recipientId === user?.id && ticket.kind === "INQUIRY" ? <><Field label={t("답변", "Reply")} value={reply} onChangeText={setReply} />
                 <Button label={t("답변 보내기", "Send reply")} onPress={() => run(async () => { await request(`/tickets/${ticket.id}/reply`, token, "POST", { reply }); setReply(""); await reload(); })} /></> : null}</View>)}
