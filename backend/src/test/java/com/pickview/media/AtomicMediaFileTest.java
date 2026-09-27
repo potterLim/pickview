@@ -31,11 +31,7 @@ class AtomicMediaFileTest {
         try (java.util.stream.Stream<Path> files = Files.list(directory)) {
             assertEquals(1, files.count());
         }
-        try (
-            InputStream replacement = new ByteArrayInputStream(
-                "replacement".getBytes(java.nio.charset.StandardCharsets.UTF_8)
-            )
-        ) {
+        try (InputStream replacement = new ByteArrayInputStream("replacement".getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
             AtomicMediaFile.publish(replacement, destination);
         }
         assertEquals("replacement", Files.readString(destination));

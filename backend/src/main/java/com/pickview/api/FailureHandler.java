@@ -25,15 +25,11 @@ public class FailureHandler {
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, String>> handleUploadLimit(MaxUploadSizeExceededException failure) {
-        return ResponseEntity.status(413).body(
-            Map.of("message", "최대 100MB 파일을 선택하세요. / Choose a file up to 100MB.")
-        );
+        return ResponseEntity.status(413).body(Map.of("message", "최대 100MB 파일을 선택하세요. / Choose a file up to 100MB."));
     }
 
     @ExceptionHandler({ DataIntegrityViolationException.class, ObjectOptimisticLockingFailureException.class })
     public ResponseEntity<Map<String, String>> handleConflict(RuntimeException failure) {
-        return ResponseEntity.status(409).body(
-            Map.of("message", "변경된 데이터입니다. 새로고침 후 다시 시도해 주세요. / Refresh and retry.")
-        );
+        return ResponseEntity.status(409).body(Map.of("message", "변경된 데이터입니다. 새로고침 후 다시 시도해 주세요. / Refresh and retry."));
     }
 }

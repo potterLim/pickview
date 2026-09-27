@@ -39,10 +39,7 @@ class BoundaryValidationTest {
 
     @Test
     void missingApprovalNeverDefaultsToRejection() throws Exception {
-        OperationsController.ApprovalRequest request = new ObjectMapper().readValue(
-            "{}",
-            OperationsController.ApprovalRequest.class
-        );
+        OperationsController.ApprovalRequest request = new ObjectMapper().readValue("{}", OperationsController.ApprovalRequest.class);
         assertThrows(ApiFailure.class, request::toDecision);
         assertEquals(EApprovalDecision.REJECT, new OperationsController.ApprovalRequest(false).toDecision());
     }

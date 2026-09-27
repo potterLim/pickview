@@ -80,10 +80,7 @@ public class MarketplaceController {
     }
 
     @PostMapping("/api/checkout")
-    public CommerceService.OrderView checkout(
-        Principal principal,
-        @Valid @RequestBody CommerceService.CheckoutRequest request
-    ) {
+    public CommerceService.OrderView checkout(Principal principal, @Valid @RequestBody CommerceService.CheckoutRequest request) {
         return mCommerce.checkout(mAccounts.requireAccount(new AccountId(principal.getName())), request);
     }
 
@@ -143,20 +140,16 @@ public class MarketplaceController {
         if (!List.of("ko", "en").contains(request.language()) || request.interests().length() > 100) {
             throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid settings");
         }
-        mAccounts
-            .requireAccount(new AccountId(principal.getName()))
-            .changeSettings(request.language(), request.interests());
+        mAccounts.requireAccount(new AccountId(principal.getName())).changeSettings(request.language(), request.interests());
     }
 
     @PostMapping("/api/seller/apply")
     @Transactional
     public void applySeller(Principal principal, @Valid @RequestBody SellerRequest request) {
-        if (
-            request.displayName().isBlank() ||
-            request.displayName().length() > 80 ||
-            request.bio().length() > 1000 ||
-            request.type() == null
-        ) {
+        if (request.displayName().isBlank()
+            || request.displayName().length() > 80
+            || request.bio().length() > 1000
+            || request.type() == null) {
             throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid seller profile");
         }
         Account account = mAccounts.requireAccount(new AccountId(principal.getName()));
@@ -185,42 +178,23 @@ public class MarketplaceController {
     }
 
     @PostMapping("/api/seller/products")
-    public CatalogService.ProductView createProduct(
-        Principal principal,
-        @Valid @RequestBody CatalogService.ProductRequest request
-    ) {
-        return mCatalog.describeProduct(
-            mCatalog.createProduct(mAccounts.requireAccount(new AccountId(principal.getName())), request)
-        );
+    public CatalogService.ProductView createProduct(Principal principal, @Valid @RequestBody CatalogService.ProductRequest request) {
+        return mCatalog.describeProduct(mCatalog.createProduct(mAccounts.requireAccount(new AccountId(principal.getName())), request));
     }
 
     @PutMapping("/api/seller/products/{id}")
-    public void updateProduct(
-        Principal principal,
-        @PathVariable String id,
-        @Valid @RequestBody CatalogService.ProductRequest request
-    ) {
-        mCatalog.updateProduct(
-            mAccounts.requireAccount(new AccountId(principal.getName())),
-            new ProductId(id),
-            request
-        );
+    public void updateProduct(Principal principal, @PathVariable String id, @Valid @RequestBody CatalogService.ProductRequest request) {
+        mCatalog.updateProduct(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id), request);
     }
 
     @PostMapping("/api/seller/products/{id}/{action}")
     public void publish(Principal principal, @PathVariable String id, @PathVariable EPublicationAction action) {
-        mCatalog.changePublication(
-            mAccounts.requireAccount(new AccountId(principal.getName())),
-            new ProductId(id),
-            action
-        );
+        mCatalog.changePublication(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id), action);
     }
 
     @GetMapping("/api/seller/sales")
     public List<CommerceService.LineView> listSales(Principal principal) {
-        return mLines
-            .findAll()
-            .stream()
+        return mLines.findAll().stream()
             .filter(line -> line.getSellerId().equals(principal.getName()))
             .map(mCommerce::describeLine)
             .toList();

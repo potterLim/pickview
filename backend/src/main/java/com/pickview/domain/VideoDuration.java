@@ -23,10 +23,7 @@ public final class VideoDuration {
 
     public void requireValidPreview(VideoDuration preview) {
         if (preview.mSeconds > Math.min(MAX_PREVIEW_SECONDS, mSeconds * MAX_PREVIEW_FRACTION)) {
-            throw new ApiFailure(
-                HttpStatus.BAD_REQUEST,
-                "미리보기는 전체의 20% 이내, 최대 60초입니다. / Preview limit exceeded."
-            );
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "미리보기는 전체의 20% 이내, 최대 60초입니다. / Preview limit exceeded.");
         }
     }
 }

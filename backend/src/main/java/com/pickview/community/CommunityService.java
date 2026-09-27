@@ -58,21 +58,15 @@ public class CommunityService {
     }
 
     public List<EngagementView> listActivity(AccountId userId) {
-        return mEngagements
-            .findAll()
-            .stream()
+        return mEngagements.findAll().stream()
             .filter(item -> item.getUserId().equals(userId.getValue()))
             .map(this::describeActivity)
             .toList();
     }
 
     public List<EngagementView> listReviews(ProductId productId) {
-        return mEngagements
-            .findAll()
-            .stream()
-            .filter(
-                item -> item.getTargetId().equals(productId.getValue()) && item.getKind().equals(EActivityKind.REVIEW)
-            )
+        return mEngagements.findAll().stream()
+            .filter(item -> item.getTargetId().equals(productId.getValue()) && item.getKind().equals(EActivityKind.REVIEW))
             .map(this::describeActivity)
             .toList();
     }
@@ -93,39 +87,23 @@ public class CommunityService {
             if (!mCommerce.canWatch(new AccountId(account.getId()), new ProductId(request.targetId()))) {
                 throw new ApiFailure(HttpStatus.FORBIDDEN, "구매 후 이용 가능합니다. / Purchase required.");
             }
-            if (
-                request.numberValue() < 0 ||
-                request.numberValue() > mCatalog.requireProduct(new ProductId(request.targetId())).getDurationSeconds()
-            ) {
+            if (request.numberValue() < 0 || request.numberValue() > mCatalog.requireProduct(new ProductId(request.targetId())).getDurationSeconds()) {
                 throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid playback position");
             }
         }
         if (request.kind().equals(EActivityKind.REVIEW)) {
-            boolean hasPurchase = mLines
-                .findAll()
-                .stream()
-                .anyMatch(
-                    line ->
-                        line.getBuyerId().equals(account.getId()) &&
-                        line.getProductId().equals(request.targetId()) &&
-                        !line.isRefunded()
-                );
+            boolean hasPurchase = mLines.findAll().stream()
+                .anyMatch(line -> line.getBuyerId().equals(account.getId())
+                    && line.getProductId().equals(request.targetId())
+                    && !line.isRefunded());
             if (!hasPurchase || request.numberValue() < 1 || request.numberValue() > 5 || request.content().isBlank()) {
-                throw new ApiFailure(
-                    HttpStatus.FORBIDDEN,
-                    "구매자만 1~5점 후기를 작성할 수 있습니다. / Verified purchase required."
-                );
+                throw new ApiFailure(HttpStatus.FORBIDDEN, "구매자만 1~5점 후기를 작성할 수 있습니다. / Verified purchase required.");
             }
         }
-        Engagement item = mEngagements
-            .findAll()
-            .stream()
-            .filter(
-                entry ->
-                    entry.getUserId().equals(account.getId()) &&
-                    entry.getKind().equals(request.kind()) &&
-                    entry.getTargetId().equals(request.targetId())
-            )
+        Engagement item = mEngagements.findAll().stream()
+            .filter(entry -> entry.getUserId().equals(account.getId())
+                && entry.getKind().equals(request.kind())
+                && entry.getTargetId().equals(request.targetId()))
             .findFirst()
             .orElseGet(() ->
                 new Engagement(
@@ -145,15 +123,10 @@ public class CommunityService {
     @Transactional
     public void removeActivity(AccountId userId, EActivityKind kind, String targetId) {
         mEngagements.deleteAll(
-            mEngagements
-                .findAll()
-                .stream()
-                .filter(
-                    item ->
-                        item.getUserId().equals(userId.getValue()) &&
-                        item.getKind().equals(kind) &&
-                        item.getTargetId().equals(targetId)
-                )
+            mEngagements.findAll().stream()
+                .filter(item -> item.getUserId().equals(userId.getValue())
+                    && item.getKind().equals(kind)
+                    && item.getTargetId().equals(targetId))
                 .toList()
         );
     }
@@ -167,30 +140,18 @@ public class CommunityService {
         if (request.kind().equals(ETicketKind.INQUIRY) || request.kind().equals(ETicketKind.REPORT)) {
             recipient = mCatalog.requireProduct(new ProductId(request.targetId())).getSellerId();
         }
-        if (
-            request.kind().equals(ETicketKind.INQUIRY) &&
-            isBlocked(new AccountId(account.getId()), new AccountId(recipient))
-        ) {
+        if (request.kind().equals(ETicketKind.INQUIRY) && isBlocked(new AccountId(account.getId()), new AccountId(recipient))) {
             throw new ApiFailure(HttpStatus.FORBIDDEN, "차단한 계정과는 문의할 수 없습니다. / Inquiry blocked.");
         }
         if (request.kind().equals(ETicketKind.REFUND)) {
-            OrderLine line = mLines
-                .findById(request.targetId())
-                .orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Order not found"));
+            OrderLine line = mLines.findById(request.targetId()).orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Order not found"));
             if (!line.getBuyerId().equals(account.getId()) || line.isRefunded()) {
                 throw new ApiFailure(HttpStatus.FORBIDDEN, "Invalid refund target");
             }
-            if (
-                mTickets
-                    .findAll()
-                    .stream()
-                    .anyMatch(
-                        ticket ->
-                            ticket.getKind().equals(ETicketKind.REFUND) &&
-                            ticket.getTargetId().equals(line.getId()) &&
-                            ticket.getStatus().equals(ETicketStatus.OPEN)
-                    )
-            ) {
+            if (mTickets.findAll().stream()
+                .anyMatch(ticket -> ticket.getKind().equals(ETicketKind.REFUND)
+                    && ticket.getTargetId().equals(line.getId())
+                    && ticket.getStatus().equals(ETicketStatus.OPEN))) {
                 throw new ApiFailure(HttpStatus.CONFLICT, "이미 요청했습니다. / Already requested.");
             }
         }
@@ -210,29 +171,20 @@ public class CommunityService {
     }
 
     public List<TicketView> listTickets(AccountId userId) {
-        return mTickets
-            .findAll()
-            .stream()
-            .filter(
-                ticket ->
-                    ticket.getUserId().equals(userId.getValue()) ||
-                    (ticket.getKind().equals(ETicketKind.INQUIRY) && ticket.getRecipientId().equals(userId.getValue()))
-            )
+        return mTickets.findAll().stream()
+            .filter(ticket -> ticket.getUserId().equals(userId.getValue())
+                || (ticket.getKind().equals(ETicketKind.INQUIRY) && ticket.getRecipientId().equals(userId.getValue())))
             .map(this::describeTicket)
             .toList();
     }
 
     @Transactional
     public void replyToInquiry(AccountId userId, TicketId ticketId, String reply) {
-        Ticket ticket = mTickets
-            .findById(ticketId.getValue())
-            .orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Ticket not found"));
-        if (
-            !ticket.getKind().equals(ETicketKind.INQUIRY) ||
-            !ticket.getRecipientId().equals(userId.getValue()) ||
-            reply.isBlank() ||
-            reply.length() > 4000
-        ) {
+        Ticket ticket = mTickets.findById(ticketId.getValue()).orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Ticket not found"));
+        if (!ticket.getKind().equals(ETicketKind.INQUIRY)
+            || !ticket.getRecipientId().equals(userId.getValue())
+            || reply.isBlank()
+            || reply.length() > 4000) {
             throw new ApiFailure(HttpStatus.FORBIDDEN, "판매자만 답변할 수 있습니다. / Seller only.");
         }
         if (isBlocked(userId, new AccountId(ticket.getUserId()))) {
@@ -243,9 +195,7 @@ public class CommunityService {
     }
 
     public List<NoticeView> listNotices(AccountId userId) {
-        return mNotices
-            .findAll()
-            .stream()
+        return mNotices.findAll().stream()
             .filter(notice -> notice.getUserId().equals(userId.getValue()))
             .map(notice -> new NoticeView(notice.getId(), notice.getMessage(), notice.isRead(), notice.getCreatedAt()))
             .toList();
@@ -253,9 +203,7 @@ public class CommunityService {
 
     @Transactional
     public void readNotice(AccountId userId, NoticeId id) {
-        Notice notice = mNotices
-            .findById(id.getValue())
-            .orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Notice not found"));
+        Notice notice = mNotices.findById(id.getValue()).orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Notice not found"));
         if (!notice.getUserId().equals(userId.getValue())) {
             throw new ApiFailure(HttpStatus.FORBIDDEN, "Owner only");
         }
@@ -269,26 +217,16 @@ public class CommunityService {
     }
 
     public void notifyPublication(Product product) {
-        mEngagements
-            .findAll()
-            .stream()
-            .filter(
-                item -> item.getKind().equals(EActivityKind.NOTIFY) && item.getTargetId().equals(product.getSellerId())
-            )
+        mEngagements.findAll().stream()
+            .filter(item -> item.getKind().equals(EActivityKind.NOTIFY) && item.getTargetId().equals(product.getSellerId()))
             .filter(item -> !isBlocked(new AccountId(item.getUserId()), new AccountId(product.getSellerId())))
             .forEach(item -> notifyUser(new AccountId(item.getUserId()), "새 영상 / New video: " + product.getTitle()));
     }
 
     private boolean isBlocked(AccountId first, AccountId second) {
-        return mEngagements
-            .findAll()
-            .stream()
-            .anyMatch(
-                item ->
-                    item.getKind().equals(EActivityKind.BLOCK) &&
-                    ((item.getUserId().equals(first.getValue()) && item.getTargetId().equals(second.getValue())) ||
-                        (item.getUserId().equals(second.getValue()) && item.getTargetId().equals(first.getValue())))
-            );
+        return mEngagements.findAll().stream()
+            .anyMatch(item -> item.getKind().equals(EActivityKind.BLOCK)
+                && ((item.getUserId().equals(first.getValue()) && item.getTargetId().equals(second.getValue())) || (item.getUserId().equals(second.getValue()) && item.getTargetId().equals(first.getValue()))));
     }
 
     public TicketView describeTicket(Ticket ticket) {

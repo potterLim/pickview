@@ -24,11 +24,7 @@ public class DemoContentUpgrade implements CommandLineRunner {
     private final ObjectMapper mMapper;
     private final boolean mIsEnabled;
 
-    public DemoContentUpgrade(
-        IProductRepository products,
-        ObjectMapper mapper,
-        @Value("${pickview.seed}") boolean isEnabled
-    ) {
+    public DemoContentUpgrade(IProductRepository products, ObjectMapper mapper, @Value("${pickview.seed}") boolean isEnabled) {
         mProducts = products;
         mMapper = mapper;
         mIsEnabled = isEnabled;
@@ -42,9 +38,7 @@ public class DemoContentUpgrade implements CommandLineRunner {
         }
         try (InputStream source = new ClassPathResource("demo-catalog.json").getInputStream()) {
             for (JsonNode content : mMapper.readTree(source)) {
-                mProducts
-                    .findById(content.path("id").asText())
-                    .ifPresent(product -> upgradeOriginalSample(product, content));
+                mProducts.findById(content.path("id").asText()).ifPresent(product -> upgradeOriginalSample(product, content));
             }
         }
     }
@@ -61,16 +55,9 @@ public class DemoContentUpgrade implements CommandLineRunner {
             new WonAmount(product.getPriceWon()),
             EAccessTerm.parseDays(product.getTermDays())
         );
-        product.changePresentation(
-            ECategory.valueOf(content.path("category").asText()),
-            content.path("thumbnail").asText()
-        );
+        product.changePresentation(ECategory.valueOf(content.path("category").asText()), content.path("thumbnail").asText());
         product.changeTags(content.path("tags").asText());
-        product.replaceMedia(
-            "sample-" + product.getId() + ".mp4",
-            "sample-" + product.getId() + "-preview.mp4",
-            content.path("duration").asDouble()
-        );
+        product.replaceMedia("sample-" + product.getId() + ".mp4", "sample-" + product.getId() + "-preview.mp4", content.path("duration").asDouble());
         switch (status) {
             case APPROVED -> product.publish();
             case WITHDRAWN -> product.withdraw();

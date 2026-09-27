@@ -263,13 +263,8 @@ class MarketplaceIntegrationTest {
     @Test
     void blockingPreventsInquiriesButNotSafetyReports() {
         mCommunity.saveActivity(mBuyer, new CommunityService.ActivityRequest("seller", EActivityKind.BLOCK, "", 0));
-        assertThrows(ApiFailure.class, () ->
-            mCommunity.createTicket(mBuyer, new CommunityService.TicketRequest("video", ETicketKind.INQUIRY, "Hello"))
-        );
-        mCommunity.createTicket(
-            mBuyer,
-            new CommunityService.TicketRequest("video", ETicketKind.REPORT, "Safety report")
-        );
+        assertThrows(ApiFailure.class, () -> mCommunity.createTicket(mBuyer, new CommunityService.TicketRequest("video", ETicketKind.INQUIRY, "Hello")));
+        mCommunity.createTicket(mBuyer, new CommunityService.TicketRequest("video", ETicketKind.REPORT, "Safety report"));
         assertEquals(1, mCommunity.listTickets(new AccountId("buyer")).size());
     }
 
@@ -301,29 +296,19 @@ class MarketplaceIntegrationTest {
     void httpBoundaryRejectsOmittedDecisionsAndInvalidCartElements() throws Exception {
         mMvc.perform(
             org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/admin/sellers/seller")
-                .with(
-                    org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(
-                        "admin"
-                    ).roles("ADMIN")
-                )
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN"))
                 .contentType("application/json")
                 .content("{}")
         ).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
         mMvc.perform(
             org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/checkout")
-                .with(
-                    org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(
-                        "buyer"
-                    )
-                )
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("buyer"))
                 .contentType("application/json")
                 .content("{\"productIds\":[null],\"requestKey\":\"key\",\"channel\":\"CARD\",\"outcome\":\"SUCCESS\"}")
         ).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
         mMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/public/products"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
-            .andExpect(
-                org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$[0].kind").value("VIDEO")
-            );
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$[0].kind").value("VIDEO"));
     }
 
     private Account saveAccount(String id, String role) {

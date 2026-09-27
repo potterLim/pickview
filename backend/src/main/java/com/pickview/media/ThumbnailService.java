@@ -62,11 +62,9 @@ public class ThumbnailService {
 
     public Path getPublicThumbnail(ProductId id) throws Exception {
         Product product = mCatalog.requireProduct(id);
-        if (
-            !product.getStatus().equals(EProductStatus.APPROVED) ||
-            product.isBlocked() ||
-            !product.getThumbnail().matches("[a-f0-9-]{36}")
-        ) {
+        if (!product.getStatus().equals(EProductStatus.APPROVED)
+            || product.isBlocked()
+            || !product.getThumbnail().matches("[a-f0-9-]{36}")) {
             throw new ApiFailure(HttpStatus.NOT_FOUND, "Thumbnail unavailable");
         }
         return mStorage.getFile(product.getThumbnail() + ".png");
@@ -89,16 +87,11 @@ public class ThumbnailService {
                 reader.setInput(input);
                 int width = reader.getWidth(0);
                 int height = reader.getHeight(0);
-                if (
-                    width < MIN_WIDTH_PIXELS ||
-                    height < MIN_HEIGHT_PIXELS ||
-                    width > MAX_EDGE_PIXELS ||
-                    height > MAX_EDGE_PIXELS
-                ) {
-                    throw new ApiFailure(
-                        HttpStatus.BAD_REQUEST,
-                        "Image dimensions must be between 160×90 and 4096×4096"
-                    );
+                if (width < MIN_WIDTH_PIXELS
+                    || height < MIN_HEIGHT_PIXELS
+                    || width > MAX_EDGE_PIXELS
+                    || height > MAX_EDGE_PIXELS) {
+                    throw new ApiFailure(HttpStatus.BAD_REQUEST, "Image dimensions must be between 160×90 and 4096×4096");
                 }
                 return reader.read(0);
             } finally {

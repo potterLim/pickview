@@ -37,23 +37,14 @@ public class AccountService {
     }
 
     public Account requireAccount(AccountId id) {
-        return mAccounts
-            .findById(id.getValue())
-            .orElseThrow(() -> new ApiFailure(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다. / Sign in required."));
+        return mAccounts.findById(id.getValue()).orElseThrow(() -> new ApiFailure(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다. / Sign in required."));
     }
 
     @Transactional
     public String login(EmailAddress email, Password password) {
-        Account account = mAccounts
-            .findByEmail(email.getValue())
-            .orElseThrow(() ->
-                new ApiFailure(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호를 확인해 주세요. / Invalid credentials.")
-            );
+        Account account = mAccounts.findByEmail(email.getValue()).orElseThrow(() -> new ApiFailure(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호를 확인해 주세요. / Invalid credentials."));
         if (!password.matches(mEncoder, account.getPasswordHash())) {
-            throw new ApiFailure(
-                HttpStatus.UNAUTHORIZED,
-                "이메일 또는 비밀번호를 확인해 주세요. / Invalid credentials."
-            );
+            throw new ApiFailure(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호를 확인해 주세요. / Invalid credentials.");
         }
         String token = UUID.randomUUID().toString() + UUID.randomUUID();
         mSessions.save(
@@ -70,10 +61,7 @@ public class AccountService {
     @Transactional
     public Account register(EmailAddress email, Password password, String name, boolean isAdult) {
         if (!isAdult) {
-            throw new ApiFailure(
-                HttpStatus.BAD_REQUEST,
-                "성인 확인과 10~64자 비밀번호가 필요합니다. / Adult confirmation and 10–64 character password required."
-            );
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "성인 확인과 10~64자 비밀번호가 필요합니다. / Adult confirmation and 10–64 character password required.");
         }
         return mAccounts.save(
             new Account(
@@ -92,8 +80,7 @@ public class AccountService {
 
     public Account authenticateOrNull(String token) {
         String digest = hashToken(token);
-        return mSessions
-            .findValidSession(digest, System.currentTimeMillis())
+        return mSessions.findValidSession(digest, System.currentTimeMillis())
             .flatMap(session -> mAccounts.findById(session.getUserId()))
             .orElse(null);
     }
@@ -106,9 +93,7 @@ public class AccountService {
 
     private String hashToken(String token) {
         try {
-            return HexFormat.of().formatHex(
-                MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8))
-            );
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException failure) {
             throw new IllegalStateException("SHA-256 required", failure);
         }

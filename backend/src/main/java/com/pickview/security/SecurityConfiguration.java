@@ -41,32 +41,23 @@ public class SecurityConfiguration {
             .cors(configuration -> configuration.configurationSource(createCorsConfiguration()))
             .sessionManagement(configuration -> configuration.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(rules ->
-                rules
-                    .requestMatchers(HttpMethod.OPTIONS, "/**")
-                    .permitAll()
+                rules.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers(
                         "/api/health",
                         "/api/auth/login",
                         "/api/auth/register",
                         "/api/public/**",
                         "/api/media/stream/**"
-                    )
-                    .permitAll()
-                    .requestMatchers("/api/admin/**")
-                    .hasAnyRole("ADMIN", "CONTENT", "SUPPORT", "FINANCE")
-                    .anyRequest()
-                    .authenticated()
+                    ).permitAll()
+                    .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "CONTENT", "SUPPORT", "FINANCE")
+                    .anyRequest().authenticated()
             )
             .exceptionHandling(configuration -> configuration.authenticationEntryPoint(this::rejectUnauthenticated))
             .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
             .build();
     }
 
-    private void rejectUnauthenticated(
-        HttpServletRequest request,
-        HttpServletResponse response,
-        AuthenticationException failure
-    ) throws IOException {
+    private void rejectUnauthenticated(HttpServletRequest request, HttpServletResponse response, AuthenticationException failure) throws IOException {
         response.setStatus(401);
         response.setContentType("application/json;charset=UTF-8");
         response.getWriter().write("{\"message\":\"로그인이 필요합니다. / Sign in required.\"}");

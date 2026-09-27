@@ -66,26 +66,19 @@ public class CommerceService {
     public OrderView checkout(Account buyer, CheckoutRequest request) {
         // Serialize a buyer's checkouts across server instances to prevent double grants.
         mEntityManager.find(Account.class, buyer.getId(), LockModeType.PESSIMISTIC_WRITE);
-        Purchase previousOrNull = mPurchases
-            .findAll()
-            .stream()
-            .filter(
-                purchase ->
-                    purchase.getBuyerId().equals(buyer.getId()) && purchase.getRequestKey().equals(request.requestKey())
-            )
+        Purchase previousOrNull = mPurchases.findAll().stream()
+            .filter(purchase -> purchase.getBuyerId().equals(buyer.getId()) && purchase.getRequestKey().equals(request.requestKey()))
             .findFirst()
             .orElse(null);
         if (previousOrNull != null) {
             return describeOrder(previousOrNull);
         }
-        if (
-            request.requestKey().isBlank() ||
-            request.requestKey().length() > 100 ||
-            request.productIds().isEmpty() ||
-            request.productIds().size() > 30 ||
-            request.channel() == null ||
-            request.outcome() == null
-        ) {
+        if (request.requestKey().isBlank()
+            || request.requestKey().length() > 100
+            || request.productIds().isEmpty()
+            || request.productIds().size() > 30
+            || request.channel() == null
+            || request.outcome() == null) {
             throw new ApiFailure(HttpStatus.BAD_REQUEST, "결제 요청을 확인하세요. / Invalid checkout.");
         }
         List<Product> products = request.productIds().stream().map(mCatalog::requireProduct).toList();
@@ -119,18 +112,14 @@ public class CommerceService {
     }
 
     public List<OrderView> listOrders(AccountId buyerId) {
-        return mPurchases
-            .findAll()
-            .stream()
+        return mPurchases.findAll().stream()
             .filter(purchase -> purchase.getBuyerId().equals(buyerId.getValue()))
             .map(this::describeOrder)
             .toList();
     }
 
     public List<LibraryView> listLibrary(AccountId buyerId) {
-        return mGrants
-            .findAll()
-            .stream()
+        return mGrants.findAll().stream()
             .filter(grant -> grant.getBuyerId().equals(buyerId.getValue()) && !grant.isRevoked())
             .map(grant ->
                 new LibraryView(
@@ -144,9 +133,7 @@ public class CommerceService {
     }
 
     public OrderView describeOrder(Purchase purchase) {
-        List<LineView> lines = mLines
-            .findAll()
-            .stream()
+        List<LineView> lines = mLines.findAll().stream()
             .filter(line -> line.getPurchaseId().equals(purchase.getId()))
             .map(this::describeLine)
             .toList();
@@ -178,26 +165,16 @@ public class CommerceService {
     private void validateCart(Account buyer, List<Product> products) {
         Set<ProductId> videoIds = new HashSet<>();
         for (Product product : products) {
-            if (
-                !product.getStatus().equals(EProductStatus.APPROVED) ||
-                product.isBlocked() ||
-                product.getSellerId().equals(buyer.getId())
-            ) {
-                throw new ApiFailure(
-                    HttpStatus.CONFLICT,
-                    "구매할 수 없는 상품입니다. / Product unavailable or self purchase."
-                );
+            if (!product.getStatus().equals(EProductStatus.APPROVED)
+                || product.isBlocked()
+                || product.getSellerId().equals(buyer.getId())) {
+                throw new ApiFailure(HttpStatus.CONFLICT, "구매할 수 없는 상품입니다. / Product unavailable or self purchase.");
             }
             for (ProductId videoId : mCatalog.expandVideoIds(product)) {
-                if (
-                    mCatalog.requireProduct(videoId).isBlocked() ||
-                    !videoIds.add(videoId) ||
-                    canWatch(new AccountId(buyer.getId()), videoId)
-                ) {
-                    throw new ApiFailure(
-                        HttpStatus.CONFLICT,
-                        "중복되거나 이용할 수 없는 영상입니다. / Duplicate or unavailable video."
-                    );
+                if (mCatalog.requireProduct(videoId).isBlocked()
+                    || !videoIds.add(videoId)
+                    || canWatch(new AccountId(buyer.getId()), videoId)) {
+                    throw new ApiFailure(HttpStatus.CONFLICT, "중복되거나 이용할 수 없는 영상입니다. / Duplicate or unavailable video.");
                 }
             }
         }
@@ -224,9 +201,7 @@ public class CommerceService {
                 ""
             )
         );
-        long expiresAt = EAccessTerm.parseDays(product.getTermDays()).calculateExpiry(
-            java.time.Instant.ofEpochMilli(purchase.getCreatedAt())
-        );
+        long expiresAt = EAccessTerm.parseDays(product.getTermDays()).calculateExpiry(java.time.Instant.ofEpochMilli(purchase.getCreatedAt()));
         for (ProductId videoId : mCatalog.expandVideoIds(product)) {
             mGrants.save(
                 new Grant(
@@ -248,21 +223,17 @@ public class CommerceService {
         @NotNull EPaymentOutcome outcome
     ) {
         public CheckoutRequest {
-            if (
-                requestKey == null ||
-                requestKey.isBlank() ||
-                requestKey.length() > 100 ||
-                channel == null ||
-                outcome == null
-            ) {
+            if (requestKey == null
+                || requestKey.isBlank()
+                || requestKey.length() > 100
+                || channel == null
+                || outcome == null) {
                 throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid checkout request");
             }
-            if (
-                productIds == null ||
-                productIds.isEmpty() ||
-                productIds.size() > 30 ||
-                productIds.stream().anyMatch(java.util.Objects::isNull)
-            ) {
+            if (productIds == null
+                || productIds.isEmpty()
+                || productIds.size() > 30
+                || productIds.stream().anyMatch(java.util.Objects::isNull)) {
                 throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid product selection");
             }
             productIds = List.copyOf(productIds);

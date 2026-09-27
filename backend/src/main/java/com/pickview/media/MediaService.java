@@ -155,15 +155,11 @@ public class MediaService {
         }
         Product product = mCatalog.requireProduct(ticketOrNull.getProductId());
         if (ticketOrNull.isReview()) {
-            Account account = mAccounts
-                .findById(ticketOrNull.getBuyerId().getValue())
-                .orElseThrow(() -> new ApiFailure(HttpStatus.FORBIDDEN, "Account unavailable"));
+            Account account = mAccounts.findById(ticketOrNull.getBuyerId().getValue()).orElseThrow(() -> new ApiFailure(HttpStatus.FORBIDDEN, "Account unavailable"));
             if (!canInspect(account, product)) {
                 throw new ApiFailure(HttpStatus.FORBIDDEN, "Review access revoked");
             }
-        } else if (
-            product.isBlocked() || !mCommerce.canWatch(ticketOrNull.getBuyerId(), new ProductId(product.getId()))
-        ) {
+        } else if (product.isBlocked() || !mCommerce.canWatch(ticketOrNull.getBuyerId(), new ProductId(product.getId()))) {
             throw new ApiFailure(HttpStatus.FORBIDDEN, "Playback access revoked");
         }
         return mStorage.getFile(product.getMediaKey());
@@ -171,11 +167,9 @@ public class MediaService {
 
     public Path getPreview(ProductId productId) throws Exception {
         Product product = mCatalog.requireProduct(productId);
-        if (
-            !product.getStatus().equals(EProductStatus.APPROVED) ||
-            product.isBlocked() ||
-            product.getPreviewKey().isBlank()
-        ) {
+        if (!product.getStatus().equals(EProductStatus.APPROVED)
+            || product.isBlocked()
+            || product.getPreviewKey().isBlank()) {
             throw new ApiFailure(HttpStatus.NOT_FOUND, "Preview unavailable");
         }
         return mStorage.getFile(product.getPreviewKey());
@@ -195,15 +189,10 @@ public class MediaService {
                 hasVideo = true;
                 int width = stream.path("width").asInt();
                 int height = stream.path("height").asInt();
-                if (
-                    !stream.path("codec_name").asText().equals("h264") ||
-                    Math.min(width, height) > MAX_SHORT_EDGE_PIXELS ||
-                    Math.max(width, height) > MAX_LONG_EDGE_PIXELS
-                ) {
-                    throw new ApiFailure(
-                        HttpStatus.BAD_REQUEST,
-                        "H.264, 1080p 이하 영상이 필요합니다. / H.264 up to 1080p required."
-                    );
+                if (!stream.path("codec_name").asText().equals("h264")
+                    || Math.min(width, height) > MAX_SHORT_EDGE_PIXELS
+                    || Math.max(width, height) > MAX_LONG_EDGE_PIXELS) {
+                    throw new ApiFailure(HttpStatus.BAD_REQUEST, "H.264, 1080p 이하 영상이 필요합니다. / H.264 up to 1080p required.");
                 }
             }
             if (type.equals("audio") && !stream.path("codec_name").asText().equals("aac")) {
@@ -228,10 +217,7 @@ public class MediaService {
                     throw new ApiFailure(HttpStatus.UNPROCESSABLE_ENTITY, "Video processing timed out");
                 }
                 if (process.exitValue() != 0) {
-                    throw new ApiFailure(
-                        HttpStatus.UNPROCESSABLE_ENTITY,
-                        "영상 처리에 실패했습니다. / Video processing failed."
-                    );
+                    throw new ApiFailure(HttpStatus.UNPROCESSABLE_ENTITY, "영상 처리에 실패했습니다. / Video processing failed.");
                 }
                 return Files.readString(log);
             } catch (InterruptedException failure) {
@@ -264,10 +250,7 @@ public class MediaService {
     }
 
     private boolean canInspect(Account account, Product product) {
-        return (
-            List.of(ERole.ADMIN, ERole.CONTENT).contains(account.getRole()) ||
-            product.getSellerId().equals(account.getId())
-        );
+        return (List.of(ERole.ADMIN, ERole.CONTENT).contains(account.getRole()) || product.getSellerId().equals(account.getId()));
     }
 
     private enum EPlaybackPurpose {

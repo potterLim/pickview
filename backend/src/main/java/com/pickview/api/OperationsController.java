@@ -42,37 +42,17 @@ public class OperationsController {
     }
 
     @PostMapping("/api/admin/sellers/{id}")
-    public void reviewSeller(
-        Principal principal,
-        @PathVariable String id,
-        @Valid @RequestBody ApprovalRequest request
-    ) {
-        mOperations.reviewSeller(
-            mAccounts.requireAccount(new AccountId(principal.getName())),
-            new AccountId(id),
-            request.toDecision()
-        );
+    public void reviewSeller(Principal principal, @PathVariable String id, @Valid @RequestBody ApprovalRequest request) {
+        mOperations.reviewSeller(mAccounts.requireAccount(new AccountId(principal.getName())), new AccountId(id), request.toDecision());
     }
 
     @PostMapping("/api/admin/products/{id}")
-    public void reviewProduct(
-        Principal principal,
-        @PathVariable String id,
-        @Valid @RequestBody DecisionRequest request
-    ) {
-        mOperations.reviewProduct(
-            mAccounts.requireAccount(new AccountId(principal.getName())),
-            new ProductId(id),
-            request.decision()
-        );
+    public void reviewProduct(Principal principal, @PathVariable String id, @Valid @RequestBody DecisionRequest request) {
+        mOperations.reviewProduct(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id), request.decision());
     }
 
     @PostMapping("/api/admin/tickets/{id}")
-    public void resolveTicket(
-        Principal principal,
-        @PathVariable String id,
-        @Valid @RequestBody ResolutionRequest request
-    ) {
+    public void resolveTicket(Principal principal, @PathVariable String id, @Valid @RequestBody ResolutionRequest request) {
         mOperations.resolveTicket(
             mAccounts.requireAccount(new AccountId(principal.getName())),
             new TicketId(id),
@@ -83,19 +63,12 @@ public class OperationsController {
 
     @PostMapping("/api/admin/roles/{id}")
     public void changeRole(Principal principal, @PathVariable String id, @Valid @RequestBody RoleRequest request) {
-        mOperations.changeRole(
-            mAccounts.requireAccount(new AccountId(principal.getName())),
-            new AccountId(id),
-            request.decision()
-        );
+        mOperations.changeRole(mAccounts.requireAccount(new AccountId(principal.getName())), new AccountId(id), request.decision());
     }
 
     @PostMapping("/api/admin/settlements/{id}")
     public Map<String, Integer> settle(Principal principal, @PathVariable String id) {
-        return Map.of(
-            "amountWon",
-            mOperations.settle(mAccounts.requireAccount(new AccountId(principal.getName())), new AccountId(id))
-        );
+        return Map.of("amountWon", mOperations.settle(mAccounts.requireAccount(new AccountId(principal.getName())), new AccountId(id)));
     }
 
     public record DecisionRequest(@NotNull EProductDecision decision) {}

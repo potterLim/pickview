@@ -29,13 +29,11 @@ public class BearerFilter extends OncePerRequestFilter {
         if (authorizationOrNull != null && authorizationOrNull.startsWith("Bearer ")) {
             Account accountOrNull = mAccounts.authenticateOrNull(authorizationOrNull.substring(7));
             if (accountOrNull != null) {
-                SecurityContextHolder.getContext().setAuthentication(
-                    new UsernamePasswordAuthenticationToken(
-                        accountOrNull.getId(),
-                        null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + accountOrNull.getRole()))
-                    )
-                );
+                SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                    accountOrNull.getId(),
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + accountOrNull.getRole()))
+                ));
             }
         }
         chain.doFilter(request, response);

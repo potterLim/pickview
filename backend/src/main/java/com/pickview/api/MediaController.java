@@ -40,10 +40,7 @@ public class MediaController {
 
     @GetMapping("/api/public/thumbnails/{id}")
     public ResponseEntity<FileSystemResource> getThumbnail(@PathVariable String id) throws Exception {
-        return ResponseEntity.ok()
-            .header("Content-Type", "image/png")
-            .header("Cache-Control", "no-cache")
-            .body(new FileSystemResource(mThumbnails.getPublicThumbnail(new ProductId(id))));
+        return ResponseEntity.ok().header("Content-Type", "image/png").header("Cache-Control", "no-cache").body(new FileSystemResource(mThumbnails.getPublicThumbnail(new ProductId(id))));
     }
 
     @PostMapping("/api/seller/products/{id}/upload")
@@ -63,22 +60,12 @@ public class MediaController {
 
     @PostMapping("/api/media/ticket/{id}")
     public Map<String, String> issueTicket(Principal principal, @PathVariable String id) {
-        return Map.of(
-            "path",
-            "/api/media/stream/" + mMedia.issueTicket(new AccountId(principal.getName()), new ProductId(id))
-        );
+        return Map.of("path", "/api/media/stream/" + mMedia.issueTicket(new AccountId(principal.getName()), new ProductId(id)));
     }
 
     @PostMapping("/api/media/review/{id}")
     public Map<String, String> issueReviewTicket(Principal principal, @PathVariable String id) {
-        return Map.of(
-            "path",
-            "/api/media/stream/" +
-                mMedia.issueReviewTicket(
-                    mAccounts.requireAccount(new AccountId(principal.getName())),
-                    new ProductId(id)
-                )
-        );
+        return Map.of("path", "/api/media/stream/" + mMedia.issueReviewTicket(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id)));
     }
 
     @GetMapping("/api/media/stream/{token}")
@@ -95,10 +82,6 @@ public class MediaController {
         if (!java.nio.file.Files.exists(file)) {
             throw new ApiFailure(HttpStatus.NOT_FOUND, "Demo media has not been prepared. Run media setup.");
         }
-        return ResponseEntity.ok()
-            .header("Cache-Control", "private, no-store")
-            .header("Accept-Ranges", "bytes")
-            .header("Content-Type", "video/mp4")
-            .body(new FileSystemResource(file));
+        return ResponseEntity.ok().header("Cache-Control", "private, no-store").header("Accept-Ranges", "bytes").header("Content-Type", "video/mp4").body(new FileSystemResource(file));
     }
 }

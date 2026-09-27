@@ -105,9 +105,7 @@ public class OperationsService {
         return new DashboardView(
             canReviewContent ? mAccounts.findAll().stream().map(UserView::createFromAccount).toList() : List.of(),
             canReviewContent ? mCatalog.describeProducts(mProducts.findAll()) : List.of(),
-            mTickets
-                .findAll()
-                .stream()
+            mTickets.findAll().stream()
                 .filter(ticket -> canReviewTicket(operator, ticket))
                 .map(mCommunity::describeTicket)
                 .toList(),
@@ -118,25 +116,16 @@ public class OperationsService {
     }
 
     public SellerSettlementView getSellerSettlementSummary(AccountId sellerId) {
-        int adjustmentWon = mAdjustments
-            .findPending(sellerId.getValue(), "")
-            .stream()
+        int adjustmentWon = mAdjustments.findPending(sellerId.getValue(), "").stream()
             .mapToInt(RefundAdjustment::getAmountWon)
             .sum();
-        int unsettledWon = mLines
-            .findAll()
-            .stream()
-            .filter(
-                line ->
-                    line.getSellerId().equals(sellerId.getValue()) &&
-                    !line.isRefunded() &&
-                    line.getSettlementId().isEmpty()
-            )
+        int unsettledWon = mLines.findAll().stream()
+            .filter(line -> line.getSellerId().equals(sellerId.getValue())
+                && !line.isRefunded()
+                && line.getSettlementId().isEmpty())
             .mapToInt(OrderLine::getSellerAmountWon)
             .sum();
-        List<Settlement> settlements = mSettlements
-            .findAll()
-            .stream()
+        List<Settlement> settlements = mSettlements.findAll().stream()
             .filter(item -> item.getSellerId().equals(sellerId.getValue()))
             .toList();
         return new SellerSettlementView(
@@ -151,20 +140,13 @@ public class OperationsService {
     public void reviewSeller(Account operator, AccountId id, EApprovalDecision decision) {
         java.util.Objects.requireNonNull(decision, "decision");
         requireRole(operator, ERole.CONTENT);
-        Account seller = mAccounts
-            .findById(id.getValue())
-            .orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Seller not found"));
+        Account seller = mAccounts.findById(id.getValue()).orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Seller not found"));
         if (decision == EApprovalDecision.APPROVE) {
             seller.approveSeller();
         } else {
             seller.rejectSeller();
         }
-        audit(
-            operator,
-            "SELLER_REVIEW",
-            id.getValue(),
-            decision == EApprovalDecision.APPROVE ? "APPROVED" : "REJECTED"
-        );
+        audit(operator, "SELLER_REVIEW", id.getValue(), decision == EApprovalDecision.APPROVE ? "APPROVED" : "REJECTED");
         mCommunity.notifyUser(id, "판매자 심사 완료 / Seller application reviewed");
     }
 
@@ -201,12 +183,10 @@ public class OperationsService {
             throw new ApiFailure(HttpStatus.NOT_FOUND, "Ticket not found");
         }
         requireRole(operator, ticket.getKind().equals(ETicketKind.REPORT) ? ERole.CONTENT : ERole.SUPPORT);
-        if (
-            ticket.getKind().equals(ETicketKind.INQUIRY) ||
-            !ticket.getStatus().equals(ETicketStatus.OPEN) ||
-            reply.isBlank() ||
-            reply.length() > 4000
-        ) {
+        if (ticket.getKind().equals(ETicketKind.INQUIRY)
+            || !ticket.getStatus().equals(ETicketStatus.OPEN)
+            || reply.isBlank()
+            || reply.length() > 4000) {
             throw new ApiFailure(HttpStatus.CONFLICT, "처리할 수 없는 문의입니다. / Ticket cannot be resolved.");
         }
         if (ticket.getKind().equals(ETicketKind.REFUND) && decision == EApprovalDecision.APPROVE) {
@@ -223,10 +203,7 @@ public class OperationsService {
         if (operator.getId().equals(id.getValue()) || role == null) {
             throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid role change");
         }
-        mAccounts
-            .findById(id.getValue())
-            .orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Account not found"))
-            .changeRole(role);
+        mAccounts.findById(id.getValue()).orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Account not found")).changeRole(role);
         audit(operator, "ROLE_CHANGED", id.getValue(), role.name());
     }
 
@@ -241,26 +218,17 @@ public class OperationsService {
             throw new ApiFailure(HttpStatus.CONFLICT, "매월 15일부터 처리 가능합니다. / Settlement opens on the 15th.");
         }
         long cutoff = today.withDayOfMonth(1).atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant().toEpochMilli();
-        List<OrderLine> eligible = mLines
-            .findAll()
-            .stream()
-            .filter(
-                line ->
-                    line.getSellerId().equals(sellerId.getValue()) &&
-                    !line.isRefunded() &&
-                    line.getSettlementId().isEmpty() &&
-                    mPurchases.findById(line.getPurchaseId()).orElseThrow().getCreatedAt() < cutoff
-            )
+        List<OrderLine> eligible = mLines.findAll().stream()
+            .filter(line -> line.getSellerId().equals(sellerId.getValue())
+                && !line.isRefunded()
+                && line.getSettlementId().isEmpty()
+                && mPurchases.findById(line.getPurchaseId()).orElseThrow().getCreatedAt() < cutoff)
             .toList();
         List<RefundAdjustment> adjustments = mAdjustments.findPending(sellerId.getValue(), "");
-        int amount =
-            eligible.stream().mapToInt(OrderLine::getSellerAmountWon).sum() -
-            adjustments.stream().mapToInt(RefundAdjustment::getAmountWon).sum();
+        int amount = eligible.stream().mapToInt(OrderLine::getSellerAmountWon).sum()
+            - adjustments.stream().mapToInt(RefundAdjustment::getAmountWon).sum();
         if (amount < MIN_PAYOUT_WON) {
-            throw new ApiFailure(
-                HttpStatus.CONFLICT,
-                "정산 가능 금액 1만원 미만은 이월됩니다. / Below payout threshold."
-            );
+            throw new ApiFailure(HttpStatus.CONFLICT, "정산 가능 금액 1만원 미만은 이월됩니다. / Below payout threshold.");
         }
         String id = UUID.randomUUID().toString();
         mSettlements.save(new Settlement(id, sellerId.getValue(), amount, System.currentTimeMillis()));
@@ -276,9 +244,7 @@ public class OperationsService {
     }
 
     private void refundLine(OrderLineId id) {
-        OrderLine existing = mLines
-            .findById(id.getValue())
-            .orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Order not found"));
+        OrderLine existing = mLines.findById(id.getValue()).orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Order not found"));
         // Use the same seller lock as settlement so refund and payout cannot race.
         mEntityManager.find(Account.class, existing.getSellerId(), LockModeType.PESSIMISTIC_WRITE);
         OrderLine line = mEntityManager.find(OrderLine.class, id.getValue(), LockModeType.PESSIMISTIC_WRITE);
@@ -293,14 +259,10 @@ public class OperationsService {
             mAdjustments.save(new RefundAdjustment(line.getId(), line.getSellerId(), line.getSellerAmountWon()));
         }
         line.refund();
-        mGrants
-            .findAll()
-            .stream()
+        mGrants.findAll().stream()
             .filter(grant -> grant.getLineId().equals(id.getValue()))
             .forEach(Grant::revoke);
-        boolean allRefunded = mLines
-            .findAll()
-            .stream()
+        boolean allRefunded = mLines.findAll().stream()
             .filter(item -> item.getPurchaseId().equals(line.getPurchaseId()))
             .allMatch(OrderLine::isRefunded);
         if (allRefunded) {
@@ -332,20 +294,12 @@ public class OperationsService {
     }
 
     private boolean canReviewTicket(Account operator, Ticket ticket) {
-        return (
-            (hasRole(operator, ERole.CONTENT) && ticket.getKind().equals(ETicketKind.REPORT)) ||
-            (hasRole(operator, ERole.SUPPORT) &&
-                List.of(ETicketKind.SUPPORT, ETicketKind.REFUND).contains(ticket.getKind()))
-        );
+        return ((hasRole(operator, ERole.CONTENT) && ticket.getKind().equals(ETicketKind.REPORT))
+            || (hasRole(operator, ERole.SUPPORT) && List.of(ETicketKind.SUPPORT, ETicketKind.REFUND).contains(ticket.getKind())));
     }
 
     private RefundAdjustmentView describeAdjustment(RefundAdjustment adjustment) {
-        return new RefundAdjustmentView(
-            adjustment.getLineId(),
-            adjustment.getSellerId(),
-            adjustment.getAmountWon(),
-            adjustment.getSettlementId()
-        );
+        return new RefundAdjustmentView(adjustment.getLineId(), adjustment.getSellerId(), adjustment.getAmountWon(), adjustment.getSettlementId());
     }
 
     private AuditView describeAudit(Audit audit) {

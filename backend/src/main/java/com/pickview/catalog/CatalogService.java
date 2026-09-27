@@ -56,16 +56,12 @@ public class CatalogService {
     }
 
     public Product requireProduct(ProductId id) {
-        return mProducts
-            .findById(id.getValue())
-            .orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "영상을 찾을 수 없습니다. / Video not found."));
+        return mProducts.findById(id.getValue()).orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "영상을 찾을 수 없습니다. / Video not found."));
     }
 
     public List<ProductView> listPublished() {
         return describeProducts(
-            mProducts
-                .findAll()
-                .stream()
+            mProducts.findAll().stream()
                 .filter(product -> product.getStatus().equals(EProductStatus.APPROVED) && !product.isBlocked())
                 .toList()
         );
@@ -73,9 +69,7 @@ public class CatalogService {
 
     public List<ProductView> listOwned(AccountId sellerId) {
         return describeProducts(
-            mProducts
-                .findAll()
-                .stream()
+            mProducts.findAll().stream()
                 .filter(product -> product.getSellerId().equals(sellerId.getValue()))
                 .toList()
         );
@@ -90,20 +84,13 @@ public class CatalogService {
             return List.of();
         }
         List<String> ids = products.stream().map(Product::getId).toList();
-        Map<String, Account> sellersById = mAccounts
-            .findAllById(products.stream().map(Product::getSellerId).distinct().toList())
-            .stream()
+        Map<String, Account> sellersById = mAccounts.findAllById(products.stream().map(Product::getSellerId).distinct().toList()).stream()
             .collect(Collectors.toMap(Account::getId, Function.identity()));
-        Map<String, IProductRating> ratingsById = mEngagements
-            .summarizeReviews(ids)
-            .stream()
+        Map<String, IProductRating> ratingsById = mEngagements.summarizeReviews(ids).stream()
             .collect(Collectors.toMap(IProductRating::getProductId, Function.identity()));
-        Map<String, IProductSales> salesById = mLines
-            .summarizeSales(ids)
-            .stream()
+        Map<String, IProductSales> salesById = mLines.summarizeSales(ids).stream()
             .collect(Collectors.toMap(IProductSales::getProductId, Function.identity()));
-        return products
-            .stream()
+        return products.stream()
             .map(product ->
                 createProductView(
                     product,
@@ -163,39 +150,23 @@ public class CatalogService {
         validateProduct(request);
         String bundleIds = "";
         if (request.kind() == EProductKind.BUNDLE) {
-            if (
-                request.videoIds().size() < 2 ||
-                request.videoIds().stream().distinct().count() != request.videoIds().size()
-            ) {
-                throw new ApiFailure(
-                    HttpStatus.BAD_REQUEST,
-                    "서로 다른 영상 2개 이상을 선택하세요. / Choose distinct videos."
-                );
+            if (request.videoIds().size() < 2 || request.videoIds().stream().distinct().count() != request.videoIds().size()) {
+                throw new ApiFailure(HttpStatus.BAD_REQUEST, "서로 다른 영상 2개 이상을 선택하세요. / Choose distinct videos.");
             }
             int individualPrice = 0;
             for (ProductId id : request.videoIds()) {
                 Product video = requireProduct(id);
-                if (
-                    !video.getSellerId().equals(seller.getId()) ||
-                    !video.getKind().equals(EProductKind.VIDEO) ||
-                    !video.getStatus().equals(EProductStatus.APPROVED)
-                ) {
-                    throw new ApiFailure(
-                        HttpStatus.BAD_REQUEST,
-                        "본인의 승인된 영상만 묶을 수 있습니다. / Approved own videos only."
-                    );
+                if (!video.getSellerId().equals(seller.getId())
+                    || !video.getKind().equals(EProductKind.VIDEO)
+                    || !video.getStatus().equals(EProductStatus.APPROVED)) {
+                    throw new ApiFailure(HttpStatus.BAD_REQUEST, "본인의 승인된 영상만 묶을 수 있습니다. / Approved own videos only.");
                 }
                 individualPrice += video.getPriceWon();
             }
             if (request.priceWon().getAmount().exceeds(new WonAmount(individualPrice))) {
-                throw new ApiFailure(
-                    HttpStatus.BAD_REQUEST,
-                    "패키지는 개별 합계 이하로 설정하세요. / Bundle exceeds individual total."
-                );
+                throw new ApiFailure(HttpStatus.BAD_REQUEST, "패키지는 개별 합계 이하로 설정하세요. / Bundle exceeds individual total.");
             }
-            bundleIds = request
-                .videoIds()
-                .stream()
+            bundleIds = request.videoIds().stream()
                 .map(ProductId::getValue)
                 .collect(java.util.stream.Collectors.joining(","));
         }
@@ -225,20 +196,12 @@ public class CatalogService {
     public void updateProduct(Account seller, ProductId id, ProductRequest request) {
         Product product = requireOwnedProduct(seller, id);
         validateProduct(request);
-        if (
-            !product.getKind().equals(request.kind()) ||
-            (product.getKind().equals(EProductKind.BUNDLE) && !expandVideoIds(product).equals(request.videoIds()))
-        ) {
-            throw new ApiFailure(
-                HttpStatus.BAD_REQUEST,
-                "상품 유형과 패키지 구성은 변경할 수 없습니다. / Product composition is immutable."
-            );
+        if (!product.getKind().equals(request.kind())
+            || (product.getKind().equals(EProductKind.BUNDLE) && !expandVideoIds(product).equals(request.videoIds()))) {
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "상품 유형과 패키지 구성은 변경할 수 없습니다. / Product composition is immutable.");
         }
-        if (
-            product.getKind().equals(EProductKind.BUNDLE) &&
-            request.priceWon().getWon() >
-                expandVideoIds(product).stream().map(this::requireProduct).mapToInt(Product::getPriceWon).sum()
-        ) {
+        if (product.getKind().equals(EProductKind.BUNDLE)
+            && request.priceWon().getWon() > expandVideoIds(product).stream().map(this::requireProduct).mapToInt(Product::getPriceWon).sum()) {
             throw new ApiFailure(HttpStatus.BAD_REQUEST, "Bundle exceeds individual total");
         }
         product.revise(request.title(), request.description(), request.priceWon().getAmount(), request.termDays());
@@ -281,21 +244,16 @@ public class CatalogService {
     }
 
     private void validateProduct(ProductRequest request) {
-        if (
-            request.title().isBlank() ||
-            request.title().length() > 150 ||
-            request.description().length() > 10000 ||
-            request.tags().length() > 300 ||
-            request.category() == null ||
-            request.kind() == null ||
-            request.termDays() == null ||
-            request.priceWon() == null ||
-            !request.hasRights()
-        ) {
-            throw new ApiFailure(
-                HttpStatus.BAD_REQUEST,
-                "상품 정보와 권리 확인을 점검하세요. / Invalid product details."
-            );
+        if (request.title().isBlank()
+            || request.title().length() > 150
+            || request.description().length() > 10000
+            || request.tags().length() > 300
+            || request.category() == null
+            || request.kind() == null
+            || request.termDays() == null
+            || request.priceWon() == null
+            || !request.hasRights()) {
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "상품 정보와 권리 확인을 점검하세요. / Invalid product details.");
         }
         if (!request.thumbnail().isEmpty() && !request.thumbnail().matches("[a-zA-Z0-9_-]+")) {
             throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid thumbnail key");
@@ -315,15 +273,13 @@ public class CatalogService {
         String tags
     ) {
         public ProductRequest {
-            if (
-                title == null ||
-                description == null ||
-                category == null ||
-                priceWon == null ||
-                termDays == null ||
-                thumbnail == null ||
-                kind == null
-            ) {
+            if (title == null
+                || description == null
+                || category == null
+                || priceWon == null
+                || termDays == null
+                || thumbnail == null
+                || kind == null) {
                 throw new ApiFailure(HttpStatus.BAD_REQUEST, "Missing product details");
             }
             if (videoIds == null || videoIds.stream().anyMatch(java.util.Objects::isNull)) {

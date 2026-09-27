@@ -50,9 +50,6 @@ class DomainValueTest {
         assertThrows(ApiFailure.class, () -> EAccessTerm.parseDays(31));
         Instant purchase = Instant.parse("2026-09-27T00:00:00Z");
         assertEquals(0, EAccessTerm.PERPETUAL.calculateExpiry(purchase));
-        assertEquals(
-            Instant.parse("2026-10-04T00:00:00Z").toEpochMilli(),
-            EAccessTerm.ONE_WEEK.calculateExpiry(purchase)
-        );
+        assertEquals(Instant.parse("2026-10-04T00:00:00Z").toEpochMilli(), EAccessTerm.ONE_WEEK.calculateExpiry(purchase));
     }
 }
