@@ -10,24 +10,30 @@
     "ios": "expo start --ios",
     "typecheck": "tsc --noEmit",
     "export:web": "expo export --platform web",
-    "lint": "eslint src App.tsx index.ts"
+    "lint": "cd .. && node frontend/node_modules/eslint/bin/eslint.js frontend/src frontend/App.tsx frontend/index.ts frontend/tests scripts --max-warnings 0",
+    "test": "node --test tests/*.test.cjs",
+    "format:check": "prettier --config prettier.config.mjs --check \"src/**/*.{ts,tsx}\" App.tsx index.ts \"tests/*.cjs\" \"../backend/src/**/*.java\" \"../scripts/*.{mjs,cjs}\"",
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm format:check"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.0.3",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "expo": "~57.0.25",
     "expo-document-picker": "~57.0.2",
-    "expo-video": "~57.0.5",
     "expo-status-bar": "~57.0.0",
+    "expo-video": "~57.0.5",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
-    "react-native-web": "^0.21.2",
-    "@expo/vector-icons": "^15.0.3",
-    "@react-native-async-storage/async-storage": "^2.2.0"
+    "react-native-web": "^0.21.2"
   },
   "devDependencies": {
-    "typescript": "~6.0.3",
     "@types/react": "~19.2.0",
     "eslint": "^9.39.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "prettier": "3.9.9",
+    "prettier-plugin-java": "2.10.4",
+    "typescript": "~6.0.3",
     "typescript-eslint": "^8.46.0"
   }
 }

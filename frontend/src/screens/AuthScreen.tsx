@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { decodeToken } from "../core/contracts";
 import { useState } from "react";
 import { Platform, Text, View } from "react-native";
@@ -6,7 +7,7 @@ import { read } from "../core/api";
 import { Button, Field } from "../ui/Controls";
 import { styles } from "../ui/theme";
 
-export function AuthScreen() {
+export function AuthScreen(): JSX.Element {
     const { t, run, signIn, busy, notify } = useStore();
     const [email, setEmail] = useState("buyer@pickview.demo");
     const [password, setPassword] = useState("PickView-demo-2026!");

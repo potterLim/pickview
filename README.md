@@ -90,10 +90,9 @@ pnpm ios
 ## 검증 명령
 
 ```powershell
-mvn -f backend/pom.xml test
+mvn -f backend/pom.xml verify
 cd frontend
-pnpm typecheck
-pnpm lint
+pnpm check
 pnpm exec expo export --platform all
 cd ..
 $env:TEST_VIDEO="$PWD/backend/.local/media/demo.mp4"
@@ -102,6 +101,10 @@ node scripts/api-smoke.mjs
 ```
 
 API 테스트는 실행 중인 로컬 서버와 기본 시연 계정을 사용합니다. 별도 API를 사용할 경우 `API_URL`을 `/api`까지 포함해 지정합니다. 운영 데이터에 실행하지 않습니다.
+
+`pnpm check`는 TypeScript, 타입 기반 ESLint·React Hook 검사, 클라이언트 회귀 테스트, Java/TypeScript/스크립트 서식 검사를 실행합니다. Maven `verify`는 Java 명명·구조 규칙 검사와 통합 테스트를 포함합니다. 같은 검사를 GitHub Actions에서도 실행합니다.
+
+API의 기존 JSON 표현은 유지하며 내부에서는 식별자, 상품 가격, 원화 금액, 이용 기간과 심사·결제 상태를 구분합니다. 외부 입력은 검증 후 강타입으로 전달하고 저장소 매핑에서 필요한 기본형으로 변환합니다. 표시용 문자열, 프레임워크 시그니처와 저장소 필드는 의미 없는 래퍼로 감싸지 않습니다.
 
 ## 구성과 개발 원칙
 

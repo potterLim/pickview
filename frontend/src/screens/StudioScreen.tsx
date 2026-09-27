@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { createProductPrice } from "../core/commerceValues";
 import { ProductDraft, type IProductInput } from "../core/ProductDraft";
 import type { ProductId } from "../core/identifiers";
@@ -17,7 +18,7 @@ import { categoryLabel, statusLabel } from "../core/presentation";
 import { CreatorIdentity } from "../ui/CreatorIdentity";
 import { InspectionPlayer } from "../ui/InspectionPlayer";
 
-export function StudioScreen() {
+export function StudioScreen(): JSX.Element {
     const { user, token, t, language, run, busy, refresh, notify } = useStore();
     const [products, setProducts] = useState<IProduct[]>([]);
     const [sales, setSales] = useState<IOrderLine[]>([]);

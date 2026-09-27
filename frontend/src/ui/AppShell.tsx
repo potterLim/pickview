@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { useEffect, type ReactNode, type ComponentProps } from "react";
 import { Pressable, ScrollView, Text, View, useWindowDimensions, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,7 +18,7 @@ const navigation: { route: Route; ko: string; en: string; icon: ComponentProps<t
     { route: "settings", ko: "설정", en: "Settings", icon: "settings-outline" },
 ];
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children }: { children: ReactNode }): JSX.Element {
     const { width } = useWindowDimensions();
     const { t, route, navigate, language, setLanguage, user, activity, message, busy, products, selected, notify } =
         useStore();

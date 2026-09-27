@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { decodePath } from "../core/contracts";
 import { useState } from "react";
 import { View } from "react-native";
@@ -6,7 +7,7 @@ import { API_URL, read } from "../core/api";
 import { useStore } from "../core/Store";
 import { Button } from "./Controls";
 
-export function InspectionPlayer({ productId }: { productId: string }) {
+export function InspectionPlayer({ productId }: { productId: string }): JSX.Element {
     const { token, t, run } = useStore();
     const [uri, setUri] = useState("");
     return (

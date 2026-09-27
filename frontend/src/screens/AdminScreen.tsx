@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { getErrorMessage } from "../core/validation";
 import { decodeDashboard } from "../core/contracts";
 import { useEffect, useState, useCallback } from "react";
@@ -10,7 +11,7 @@ import { money, styles } from "../ui/theme";
 import { statusLabel } from "../core/presentation";
 import { InspectionPlayer } from "../ui/InspectionPlayer";
 
-export function AdminScreen() {
+export function AdminScreen(): JSX.Element {
     const { token, user, t, language, run, refresh } = useStore();
     const [dashboard, setDashboard] = useState<IDashboard | null>(null);
     const [reply, setReply] = useState("");

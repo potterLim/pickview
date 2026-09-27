@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
@@ -17,7 +18,7 @@ export function Playback({
     product: IProduct;
     full: boolean;
     onPurchase: () => void;
-}) {
+}): JSX.Element {
     const { token, activity, t, rememberProgress } = useStore();
     const [speed, setSpeed] = useState(1);
     const [muted, setMuted] = useState(true);

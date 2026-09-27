@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { Pressable, Text, View } from "react-native";
 import { colors, styles } from "./theme";
 
@@ -11,7 +12,7 @@ export function CreatorIdentity({
     subtitle?: string;
     size?: number;
     onPress?: () => void;
-}) {
+}): JSX.Element {
     const initial = name.replace(/^스튜디오\s*/, "").slice(0, 1);
     const content = (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minWidth: 0 }}>

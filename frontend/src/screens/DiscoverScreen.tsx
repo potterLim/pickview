@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { useState } from "react";
 import { ImageBackground, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useStore } from "../core/Store";
@@ -5,7 +6,7 @@ import { colors, styles } from "../ui/theme";
 import { ProductCard, thumbnails } from "../ui/ProductCard";
 import { Button, Empty } from "../ui/Controls";
 
-export function DiscoverScreen() {
+export function DiscoverScreen(): JSX.Element {
     const { products, t, user, activity, route, navigate } = useStore();
     const { width } = useWindowDimensions();
     const [query, setQuery] = useState("");

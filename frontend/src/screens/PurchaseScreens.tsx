@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { decodeArray } from "../core/validation";
 import { decodeOrder, decodeTicket } from "../core/contracts";
 import { useEffect, useState, useRef, useCallback } from "react";
@@ -10,7 +11,7 @@ import { Button, Empty, Field, Loading } from "../ui/Controls";
 import { ProductCard, ProductArtwork } from "../ui/ProductCard";
 import { colors, money, styles } from "../ui/theme";
 
-export function CartScreen() {
+export function CartScreen(): JSX.Element {
     const { activity, products, token, t, run, busy, refresh, navigate, toggle } = useStore();
     const { width } = useWindowDimensions();
     const [channel, setChannel] = useState("CARD");
@@ -252,7 +253,7 @@ export function CartScreen() {
     );
 }
 
-export function LibraryScreen() {
+export function LibraryScreen(): JSX.Element {
     const { library, t, activity } = useStore();
     const { width } = useWindowDimensions();
     const ordered = library.slice().sort((first, second) => Number(second.active) - Number(first.active));
@@ -319,7 +320,7 @@ function WatchProgress({ seconds, duration }: { seconds: number; duration: numbe
     );
 }
 
-export function OrdersScreen() {
+export function OrdersScreen(): JSX.Element {
     const { token, t, language, run, busy, notify, navigate } = useStore();
     const [orders, setOrders] = useState<IOrder[]>([]);
     const [tickets, setTickets] = useState<ITicket[]>([]);

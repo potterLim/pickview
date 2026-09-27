@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { Pressable, Text, TextInput, View, ActivityIndicator, type TextInputProps } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState, type ComponentProps } from "react";
@@ -27,7 +28,7 @@ export function Button({
     fullWidth = false,
     quiet = false,
     loading = false,
-}: IButtonProps) {
+}: IButtonProps): JSX.Element {
     const [focused, setFocused] = useState(false);
     const [hovered, setHovered] = useState(false);
     const inactive = disabled || loading;
@@ -106,7 +107,7 @@ export function Choice({
     onPress: () => void;
     multiple?: boolean;
     disabled?: boolean;
-}) {
+}): JSX.Element {
     const [focused, setFocused] = useState(false);
     const [hovered, setHovered] = useState(false);
     return (
@@ -153,7 +154,7 @@ export function Choice({
     );
 }
 
-export function Field({ label, ...props }: TextInputProps & { label: string }) {
+export function Field({ label, ...props }: TextInputProps & { label: string }): JSX.Element {
     const [focused, setFocused] = useState(false);
     return (
         <View>
@@ -196,7 +197,7 @@ export function Empty({
     description?: string;
     actionLabel?: string;
     onAction?: () => void;
-}) {
+}): JSX.Element {
     const { t, navigate } = useStore();
     return (
         <View style={{ paddingVertical: 44, paddingHorizontal: 20, alignItems: "center", gap: 18 }}>
@@ -224,6 +225,6 @@ export function Empty({
         </View>
     );
 }
-export function Loading() {
+export function Loading(): JSX.Element {
     return <ActivityIndicator size="large" color={colors.violet} style={{ margin: 40 }} />;
 }

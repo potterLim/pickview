@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { decodeArray } from "../core/validation";
 import { decodeActivity, decodePath } from "../core/contracts";
 import { useEffect, useState } from "react";
@@ -13,7 +14,7 @@ import { ProductArtwork } from "../ui/ProductCard";
 import { Playback } from "../ui/Playback";
 import { colors, money, styles } from "../ui/theme";
 
-export function DetailScreen() {
+export function DetailScreen(): JSX.Element | null {
     const {
         selected: product,
         token,

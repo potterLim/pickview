@@ -21,6 +21,21 @@
       <resource><directory>src/main/resources</directory></resource>
       <resource><directory>../content</directory><includes><include>demo-catalog.json</include></includes></resource>
     </resources>
-    <plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin></plugins>
+    <plugins>
+      <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-checkstyle-plugin</artifactId><version>3.6.0</version>
+        <dependencies>
+          <dependency><groupId>com.puppycrawl.tools</groupId><artifactId>checkstyle</artifactId><version>10.26.1</version></dependency>
+        </dependencies>
+        <configuration>
+          <configLocation>config/checkstyle.xml</configLocation>
+          <includeTestSourceDirectory>true</includeTestSourceDirectory>
+          <consoleOutput>true</consoleOutput>
+          <failOnViolation>true</failOnViolation>
+        </configuration>
+        <executions><execution><id>check-style</id><phase>validate</phase><goals><goal>check</goal></goals></execution></executions>
+      </plugin>
+    </plugins>
   </build>
 </project>

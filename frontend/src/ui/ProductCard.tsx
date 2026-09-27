@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { useState } from "react";
 import { Image, Pressable, Text, View, type ImageSourcePropType } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,7 +24,7 @@ export function ProductArtwork({
     product: IProduct;
     showPlay?: boolean;
     showDuration?: boolean;
-}) {
+}): JSX.Element {
     const { t } = useStore();
     const source =
         thumbnails[product.thumbnail] ??
@@ -96,7 +97,7 @@ export function ProductArtwork({
     );
 }
 
-export function ProductCard({ product, width }: { product: IProduct; width: number | `${number}%` }) {
+export function ProductCard({ product, width }: { product: IProduct; width: number | `${number}%` }): JSX.Element {
     const { navigate, t, language, library } = useStore();
     const [highlighted, setHighlighted] = useState(false);
     const owned = library.some((item) => item.product.id === product.id && item.active);

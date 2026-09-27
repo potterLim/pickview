@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import type { ProductId } from "./identifiers";
 import { getErrorMessage } from "./validation";
 import { decodeArray } from "./validation";
@@ -34,7 +35,7 @@ interface IStore {
 }
 const Store = createContext<IStore | null>(null);
 
-export function StoreProvider({ children }: { children: ReactNode }) {
+export function StoreProvider({ children }: { children: ReactNode }): JSX.Element {
     const [token, setToken] = useState("");
     const [user, setUser] = useState<IUser | null>(null);
     const [language, setLanguageState] = useState<Language>("ko");

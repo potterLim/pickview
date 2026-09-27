@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { StoreProvider, useStore } from "./src/core/Store";
 import { AppShell } from "./src/ui/AppShell";
 import { DiscoverScreen } from "./src/screens/DiscoverScreen";
@@ -36,7 +37,7 @@ function CurrentScreen() {
     }
 }
 
-export default function App() {
+export default function App(): JSX.Element {
     return (
         <StoreProvider>
             <AppShell>

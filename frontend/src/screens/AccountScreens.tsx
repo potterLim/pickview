@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { decodeArray } from "../core/validation";
 import { decodeSeller, decodeTicket, decodeNotice } from "../core/contracts";
 import { useEffect, useState, useCallback, type ComponentProps } from "react";
@@ -12,7 +13,7 @@ import { CreatorIdentity } from "../ui/CreatorIdentity";
 import { statusLabel } from "../core/presentation";
 import { colors, styles } from "../ui/theme";
 
-export function SellerScreen() {
+export function SellerScreen(): JSX.Element | null {
     const { selected, products, t, run, toggle, hasActivity } = useStore();
     const { width } = useWindowDimensions();
     const [bio, setBio] = useState("");
@@ -92,7 +93,7 @@ export function SellerScreen() {
     );
 }
 
-export function InboxScreen() {
+export function InboxScreen(): JSX.Element {
     const { token, user, t, language, run, busy } = useStore();
     const [tickets, setTickets] = useState<ITicket[]>([]);
     const [notices, setNotices] = useState<INotice[]>([]);
@@ -392,7 +393,7 @@ function TicketConversation({
     );
 }
 
-export function SettingsScreen() {
+export function SettingsScreen(): JSX.Element {
     const { user, token, language, setLanguage, t, run, busy, refresh, signOut, navigate } = useStore();
     const { width } = useWindowDimensions();
     const [interests, setInterests] = useState(user?.interests ?? "");
