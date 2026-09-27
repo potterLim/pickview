@@ -1,4 +1,6 @@
 import type { JSX } from "react";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider, SafeAreaView, initialWindowMetrics } from "react-native-safe-area-context";
 import { StoreProvider, useStore } from "./src/core/Store";
 import { AppShell } from "./src/ui/AppShell";
 import { DiscoverScreen } from "./src/screens/DiscoverScreen";
@@ -39,10 +41,15 @@ function CurrentScreen() {
 
 export default function App(): JSX.Element {
     return (
-        <StoreProvider>
-            <AppShell>
-                <CurrentScreen />
-            </AppShell>
-        </StoreProvider>
+        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+            <StatusBar style="dark" />
+            <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
+                <StoreProvider>
+                    <AppShell>
+                        <CurrentScreen />
+                    </AppShell>
+                </StoreProvider>
+            </SafeAreaView>
+        </SafeAreaProvider>
     );
 }

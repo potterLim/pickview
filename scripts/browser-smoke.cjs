@@ -13,6 +13,8 @@ async function login(page, email) {
 
 async function checkOverflow(page, width, height) {
     await page.setViewportSize({ width, height });
+    // React Native updates responsive layout after the browser resize event.
+    await page.waitForFunction(() => document.documentElement.scrollWidth === innerWidth);
     const dimensions = await page.evaluate(() => ({
         scroll: document.documentElement.scrollWidth,
         viewport: innerWidth,
