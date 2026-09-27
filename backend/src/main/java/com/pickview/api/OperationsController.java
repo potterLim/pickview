@@ -37,7 +37,7 @@ public class OperationsController {
 
     @GetMapping("/api/seller/settlements")
     public OperationsService.SellerSettlementView getSellerSettlements(Principal principal) {
-        return mOperations.getSellerSettlementSummary(principal.getName());
+        return mOperations.getSellerSettlementSummary(new AccountId(principal.getName()));
     }
 
     @PostMapping("/api/admin/sellers/{id}")
@@ -67,7 +67,7 @@ public class OperationsController {
 
     @PostMapping("/api/admin/settlements/{id}")
     public Map<String, Integer> settle(Principal principal, @PathVariable String id) {
-        return Map.of("amountWon", mOperations.settle(mAccounts.requireAccount(new AccountId(principal.getName())), id));
+        return Map.of("amountWon", mOperations.settle(mAccounts.requireAccount(new AccountId(principal.getName())), new AccountId(id)));
     }
 
     public record DecisionRequest(@NotNull EProductDecision decision) {

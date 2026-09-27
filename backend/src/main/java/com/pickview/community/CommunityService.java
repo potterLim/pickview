@@ -8,6 +8,7 @@ import com.pickview.domain.EActivityKind;
 import com.pickview.domain.ETicketKind;
 import com.pickview.domain.NoticeId;
 import com.pickview.domain.ProductId;
+import com.pickview.domain.TicketId;
 import com.pickview.model.Account;
 import com.pickview.model.Engagement;
 import com.pickview.model.Notice;
@@ -54,20 +55,20 @@ public class CommunityService {
         mCatalog = catalog;
     }
 
-    public List<EngagementView> listActivity(String userId) {
+    public List<EngagementView> listActivity(AccountId userId) {
         return mEngagements
             .findAll()
             .stream()
-            .filter(item -> item.getUserId().equals(userId))
+            .filter(item -> item.getUserId().equals(userId.getValue()))
             .map(this::describeActivity)
             .toList();
     }
 
-    public List<EngagementView> listReviews(String productId) {
+    public List<EngagementView> listReviews(ProductId productId) {
         return mEngagements
             .findAll()
             .stream()
-            .filter(item -> item.getTargetId().equals(productId) && item.getKind().equals(com.pickview.domain.EActivityKind.REVIEW))
+            .filter(item -> item.getTargetId().equals(productId.getValue()) && item.getKind().equals(com.pickview.domain.EActivityKind.REVIEW))
             .map(this::describeActivity)
             .toList();
     }
@@ -139,14 +140,14 @@ public class CommunityService {
     }
 
     @Transactional
-    public void removeActivity(String userId, String kind, String targetId) {
+    public void removeActivity(AccountId userId, EActivityKind kind, String targetId) {
         mEngagements.deleteAll(
             mEngagements
                 .findAll()
                 .stream()
                 .filter(
                     item ->
-                        item.getUserId().equals(userId) &&
+                        item.getUserId().equals(userId.getValue()) &&
                         item.getKind().equals(kind) &&
                         item.getTargetId().equals(targetId)
                 )
@@ -167,7 +168,7 @@ public class CommunityService {
         if (request.kind().equals(ETicketKind.INQUIRY) || request.kind().equals(ETicketKind.REPORT)) {
             recipient = mCatalog.requireProduct(new ProductId(request.targetId())).getSellerId();
         }
-        if (request.kind().equals(ETicketKind.INQUIRY) && isBlocked(account.getId(), recipient)) {
+        if (request.kind().equals(ETicketKind.INQUIRY) && isBlocked(new AccountId(account.getId()), new AccountId(recipient))) {
             throw new ApiFailure(403, "차단한 계정과는 문의할 수 없습니다. / Inquiry blocked.");
         }
         if (request.kind().equals(ETicketKind.REFUND)) {
@@ -206,57 +207,57 @@ public class CommunityService {
         );
     }
 
-    public List<TicketView> listTickets(String userId) {
+    public List<TicketView> listTickets(AccountId userId) {
         return mTickets
             .findAll()
             .stream()
             .filter(
                 ticket ->
-                    ticket.getUserId().equals(userId) ||
-                    (ticket.getKind().equals(com.pickview.domain.ETicketKind.INQUIRY) && ticket.getRecipientId().equals(userId))
+                    ticket.getUserId().equals(userId.getValue()) ||
+                    (ticket.getKind().equals(com.pickview.domain.ETicketKind.INQUIRY) && ticket.getRecipientId().equals(userId.getValue()))
             )
             .map(this::describeTicket)
             .toList();
     }
 
     @Transactional
-    public void replyToInquiry(String userId, String ticketId, String reply) {
-        Ticket ticket = mTickets.findById(ticketId).orElseThrow(() -> new ApiFailure(404, "Ticket not found"));
+    public void replyToInquiry(AccountId userId, TicketId ticketId, String reply) {
+        Ticket ticket = mTickets.findById(ticketId.getValue()).orElseThrow(() -> new ApiFailure(404, "Ticket not found"));
         if (
             !ticket.getKind().equals(com.pickview.domain.ETicketKind.INQUIRY) ||
-            !ticket.getRecipientId().equals(userId) ||
+            !ticket.getRecipientId().equals(userId.getValue()) ||
             reply.isBlank() ||
             reply.length() > 4000
         ) {
             throw new ApiFailure(403, "판매자만 답변할 수 있습니다. / Seller only.");
         }
-        if (isBlocked(userId, ticket.getUserId())) {
+        if (isBlocked(userId, new AccountId(ticket.getUserId()))) {
             throw new ApiFailure(403, "Inquiry blocked");
         }
         ticket.resolve(reply, com.pickview.domain.ETicketStatus.RESOLVED);
-        notifyUser(ticket.getUserId(), "문의 답변이 도착했습니다. / Your inquiry has a reply.");
+        notifyUser(new AccountId(ticket.getUserId()), "문의 답변이 도착했습니다. / Your inquiry has a reply.");
     }
 
-    public List<NoticeView> listNotices(String userId) {
+    public List<NoticeView> listNotices(AccountId userId) {
         return mNotices
             .findAll()
             .stream()
-            .filter(notice -> notice.getUserId().equals(userId))
+            .filter(notice -> notice.getUserId().equals(userId.getValue()))
             .map(notice -> new NoticeView(notice.getId(), notice.getMessage(), notice.isRead(), notice.getCreatedAt()))
             .toList();
     }
 
     @Transactional
-    public void readNotice(String userId, NoticeId id) {
+    public void readNotice(AccountId userId, NoticeId id) {
         Notice notice = mNotices.findById(id.getValue()).orElseThrow(() -> new ApiFailure(404, "Notice not found"));
-        if (!notice.getUserId().equals(userId)) {
+        if (!notice.getUserId().equals(userId.getValue())) {
             throw new ApiFailure(403, "Owner only");
         }
         notice.markRead();
     }
 
-    public void notifyUser(String userId, String message) {
-        mNotices.save(new Notice(UUID.randomUUID().toString(), userId, message, false, System.currentTimeMillis()));
+    public void notifyUser(AccountId userId, String message) {
+        mNotices.save(new Notice(UUID.randomUUID().toString(), userId.getValue(), message, false, System.currentTimeMillis()));
     }
 
     public void notifyPublication(Product product) {
@@ -264,26 +265,26 @@ public class CommunityService {
             .findAll()
             .stream()
             .filter(item -> item.getKind().equals(com.pickview.domain.EActivityKind.NOTIFY) && item.getTargetId().equals(product.getSellerId()))
-            .filter(item -> !isBlocked(item.getUserId(), product.getSellerId()))
-            .forEach(item -> notifyUser(item.getUserId(), "새 영상 / New video: " + product.getTitle()));
+            .filter(item -> !isBlocked(new AccountId(item.getUserId()), new AccountId(product.getSellerId())))
+            .forEach(item -> notifyUser(new AccountId(item.getUserId()), "새 영상 / New video: " + product.getTitle()));
     }
 
-    private boolean isBlocked(String first, String second) {
+    private boolean isBlocked(AccountId first, AccountId second) {
         return mEngagements
             .findAll()
             .stream()
             .anyMatch(
                 item ->
                     item.getKind().equals(com.pickview.domain.EActivityKind.BLOCK) &&
-                    ((item.getUserId().equals(first) && item.getTargetId().equals(second)) ||
-                        (item.getUserId().equals(second) && item.getTargetId().equals(first)))
+                    ((item.getUserId().equals(first.getValue()) && item.getTargetId().equals(second.getValue())) ||
+                        (item.getUserId().equals(second.getValue()) && item.getTargetId().equals(first.getValue())))
             );
     }
 
     public TicketView describeTicket(Ticket ticket) {
         return new TicketView(
             ticket.getId(),
-            ticket.getUserId(),
+            new AccountId(ticket.getUserId()),
             ticket.getTargetId(),
             ticket.getRecipientId(),
             ticket.getKind(),
@@ -326,7 +327,7 @@ public class CommunityService {
 
     public record TicketView(
         String id,
-        String userId,
+        AccountId userId,
         String targetId,
         String recipientId,
         ETicketKind kind,

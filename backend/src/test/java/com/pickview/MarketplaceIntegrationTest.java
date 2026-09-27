@@ -56,6 +56,7 @@ import org.springframework.transaction.annotation.Transactional;
 )
 @Import(MarketplaceIntegrationTest.FixedTime.class)
 @Transactional
+@org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 class MarketplaceIntegrationTest {
 
     private final IAccountRepository mAccounts;
@@ -82,6 +83,8 @@ class MarketplaceIntegrationTest {
 
     private final com.pickview.security.AccountService mAccountService;
 
+    private final org.springframework.test.web.servlet.MockMvc mMvc;
+
     private Account mBuyer;
     private Account mAdmin;
 
@@ -98,7 +101,8 @@ class MarketplaceIntegrationTest {
         CommunityService community,
         OperationsService operations,
         com.pickview.catalog.CatalogService catalog,
-        com.pickview.security.AccountService accountService
+        com.pickview.security.AccountService accountService,
+        org.springframework.test.web.servlet.MockMvc mvc
     ) {
         mAccounts = accounts;
         mProducts = products;
@@ -112,6 +116,7 @@ class MarketplaceIntegrationTest {
         mOperations = operations;
         mCatalog = catalog;
         mAccountService = accountService;
+        mMvc = mvc;
     }
 
     @BeforeEach
@@ -192,12 +197,12 @@ class MarketplaceIntegrationTest {
         mOperations.resolveTicket(mAdmin, new TicketId("refund-ticket"), "Approved", EApprovalDecision.APPROVE);
         assertFalse(mCommerce.canWatch(new AccountId("buyer"), new ProductId("video")));
         assertEquals(15000, mAdjustments.findById("refunded").orElseThrow().getAmountWon());
-        assertEquals(-15000, mOperations.getSellerSettlementSummary("seller").pendingWon());
+        assertEquals(-15000, mOperations.getSellerSettlementSummary(new AccountId("seller")).pendingWon());
         saveHistoricalLine("eligible", 30000, "");
-        assertEquals(15000, mOperations.settle(mAdmin, "seller"));
+        assertEquals(15000, mOperations.settle(mAdmin, new AccountId("seller")));
         assertTrue(mAdjustments.findPending("seller", "").isEmpty());
-        assertEquals(0, mOperations.getSellerSettlementSummary("seller").pendingWon());
-        assertThrows(ApiFailure.class, () -> mOperations.settle(mAdmin, "seller"));
+        assertEquals(0, mOperations.getSellerSettlementSummary(new AccountId("seller")).pendingWon());
+        assertThrows(ApiFailure.class, () -> mOperations.settle(mAdmin, new AccountId("seller")));
         assertThrows(ApiFailure.class, () -> mOperations.resolveTicket(mAdmin, new TicketId("refund-ticket"), "Again", EApprovalDecision.APPROVE));
     }
 
@@ -207,7 +212,7 @@ class MarketplaceIntegrationTest {
         mTickets.save(new Ticket("refund-ticket", "buyer", "refunded", "", com.pickview.domain.ETicketKind.REFUND, "Request", com.pickview.domain.ETicketStatus.OPEN, "", 1));
         mOperations.resolveTicket(mAdmin, new TicketId("refund-ticket"), "Approved", EApprovalDecision.APPROVE);
         saveHistoricalLine("small", 20000, "");
-        assertThrows(ApiFailure.class, () -> mOperations.settle(mAdmin, "seller"));
+        assertThrows(ApiFailure.class, () -> mOperations.settle(mAdmin, new AccountId("seller")));
         assertEquals(1, mAdjustments.findPending("seller", "").size());
         assertEquals("", mLines.findById("small").orElseThrow().getSettlementId());
     }
@@ -219,7 +224,7 @@ class MarketplaceIntegrationTest {
             mCommunity.createTicket(mBuyer, new CommunityService.TicketRequest("video", ETicketKind.INQUIRY, "Hello"))
         );
         mCommunity.createTicket(mBuyer, new CommunityService.TicketRequest("video", ETicketKind.REPORT, "Safety report"));
-        assertEquals(1, mCommunity.listTickets("buyer").size());
+        assertEquals(1, mCommunity.listTickets(new AccountId("buyer")).size());
     }
 
     @Test
@@ -241,6 +246,22 @@ class MarketplaceIntegrationTest {
         assertEquals(account.getId(), mAccountService.authenticateOrNull(token).getId());
         mAccountService.logout(token);
         org.junit.jupiter.api.Assertions.assertNull(mAccountService.authenticateOrNull(token));
+    }
+
+    @Test
+    void httpBoundaryRejectsOmittedDecisionsAndInvalidCartElements() throws Exception {
+        mMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/admin/sellers/seller")
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN"))
+            .contentType("application/json").content("{}"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        mMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/checkout")
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("buyer"))
+            .contentType("application/json")
+            .content("{\"productIds\":[null],\"requestKey\":\"key\",\"channel\":\"CARD\",\"outcome\":\"SUCCESS\"}"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        mMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/public/products"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$[0].kind").value("VIDEO"));
     }
 
     private Account saveAccount(String id, String role) {

@@ -4,6 +4,8 @@ import com.pickview.catalog.CatalogService;
 import com.pickview.commerce.CommerceService;
 import com.pickview.community.CommunityService;
 import com.pickview.domain.AccountId;
+import com.pickview.domain.EActivityKind;
+import com.pickview.domain.TicketId;
 import com.pickview.domain.EPublicationAction;
 import com.pickview.domain.ESellerType;
 import com.pickview.domain.NoticeId;
@@ -71,7 +73,7 @@ public class MarketplaceController {
 
     @GetMapping("/api/public/products/{id}/reviews")
     public List<CommunityService.EngagementView> getReviews(@PathVariable String id) {
-        return mCommunity.listReviews(id);
+        return mCommunity.listReviews(new ProductId(id));
     }
 
     @PostMapping("/api/checkout")
@@ -94,7 +96,7 @@ public class MarketplaceController {
 
     @GetMapping("/api/activity")
     public List<CommunityService.EngagementView> listActivity(Principal principal) {
-        return mCommunity.listActivity(principal.getName());
+        return mCommunity.listActivity(new AccountId(principal.getName()));
     }
 
     @PutMapping("/api/activity")
@@ -103,13 +105,13 @@ public class MarketplaceController {
     }
 
     @DeleteMapping("/api/activity/{kind}/{targetId}")
-    public void deleteActivity(Principal principal, @PathVariable String kind, @PathVariable String targetId) {
-        mCommunity.removeActivity(principal.getName(), kind, targetId);
+    public void deleteActivity(Principal principal, @PathVariable EActivityKind kind, @PathVariable String targetId) {
+        mCommunity.removeActivity(new AccountId(principal.getName()), kind, targetId);
     }
 
     @GetMapping("/api/tickets")
     public List<CommunityService.TicketView> listTickets(Principal principal) {
-        return mCommunity.listTickets(principal.getName());
+        return mCommunity.listTickets(new AccountId(principal.getName()));
     }
 
     @PostMapping("/api/tickets")
@@ -119,17 +121,17 @@ public class MarketplaceController {
 
     @PostMapping("/api/tickets/{id}/reply")
     public void reply(Principal principal, @PathVariable String id, @Valid @RequestBody ReplyRequest request) {
-        mCommunity.replyToInquiry(principal.getName(), id, request.reply());
+        mCommunity.replyToInquiry(new AccountId(principal.getName()), new TicketId(id), request.reply());
     }
 
     @GetMapping("/api/notices")
     public List<CommunityService.NoticeView> listNotices(Principal principal) {
-        return mCommunity.listNotices(principal.getName());
+        return mCommunity.listNotices(new AccountId(principal.getName()));
     }
 
     @PostMapping("/api/notices/{id}/read")
     public void readNotice(Principal principal, @PathVariable String id) {
-        mCommunity.readNotice(principal.getName(), new NoticeId(id));
+        mCommunity.readNotice(new AccountId(principal.getName()), new NoticeId(id));
     }
 
     @PutMapping("/api/settings")
@@ -195,8 +197,8 @@ public class MarketplaceController {
     }
 
     @PostMapping("/api/seller/products/{id}/{action}")
-    public void publish(Principal principal, @PathVariable String id, @PathVariable String action) {
-        mCatalog.changePublication(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id), EPublicationAction.valueOf(action));
+    public void publish(Principal principal, @PathVariable String id, @PathVariable EPublicationAction action) {
+        mCatalog.changePublication(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id), action);
     }
 
     @GetMapping("/api/seller/sales")

@@ -42,6 +42,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class OperationsService {
 
+    private static final int SETTLEMENT_OPEN_DAY = 15;
+    private static final int MIN_PAYOUT_WON = 10_000;
+
     private final IAccountRepository mAccounts;
     private final IProductRepository mProducts;
     private final ITicketRepository mTickets;
@@ -92,7 +95,6 @@ public class OperationsService {
     public DashboardView getDashboard(Account operator) {
         requireRole(operator, ERole.CONTENT, ERole.SUPPORT, ERole.FINANCE);
         boolean canReviewContent = hasRole(operator, ERole.CONTENT);
-        boolean canHandleSupport = hasRole(operator, ERole.SUPPORT);
         boolean canManageFinance = hasRole(operator, ERole.FINANCE);
         boolean isAdministrator = operator.getRole().equals(com.pickview.domain.ERole.ADMIN);
         return new DashboardView(
@@ -101,7 +103,7 @@ public class OperationsService {
             mTickets
                 .findAll()
                 .stream()
-                .filter(ticket -> canReviewTicket(ticket, canReviewContent, canHandleSupport))
+                .filter(ticket -> canReviewTicket(operator, ticket))
                 .map(mCommunity::describeTicket)
                 .toList(),
             canManageFinance ? mLines.findAll().stream().map(mCommerce::describeLine).toList() : List.of(),
@@ -110,9 +112,9 @@ public class OperationsService {
         );
     }
 
-    public SellerSettlementView getSellerSettlementSummary(String sellerId) {
+    public SellerSettlementView getSellerSettlementSummary(AccountId sellerId) {
         int adjustmentWon = mAdjustments
-            .findPending(sellerId, "")
+            .findPending(sellerId.getValue(), "")
             .stream()
             .mapToInt(RefundAdjustment::getAmountWon)
             .sum();
@@ -120,14 +122,14 @@ public class OperationsService {
             .findAll()
             .stream()
             .filter(
-                line -> line.getSellerId().equals(sellerId) && !line.isRefunded() && line.getSettlementId().isEmpty()
+                line -> line.getSellerId().equals(sellerId.getValue()) && !line.isRefunded() && line.getSettlementId().isEmpty()
             )
             .mapToInt(OrderLine::getSellerAmountWon)
             .sum();
         List<Settlement> settlements = mSettlements
             .findAll()
             .stream()
-            .filter(item -> item.getSellerId().equals(sellerId))
+            .filter(item -> item.getSellerId().equals(sellerId.getValue()))
             .toList();
         return new SellerSettlementView(
             unsettledWon - adjustmentWon,
@@ -148,7 +150,7 @@ public class OperationsService {
             seller.rejectSeller();
         }
         audit(operator, "SELLER_REVIEW", id.getValue(), decision == EApprovalDecision.APPROVE ? "APPROVED" : "REJECTED");
-        mCommunity.notifyUser(id.getValue(), "판매자 심사 완료 / Seller application reviewed");
+        mCommunity.notifyUser(id, "판매자 심사 완료 / Seller application reviewed");
     }
 
     @Transactional
@@ -170,7 +172,7 @@ public class OperationsService {
             default -> throw new ApiFailure(400, "Invalid decision");
         }
         audit(operator, "PRODUCT_REVIEW", id.getValue(), decision.name());
-        mCommunity.notifyUser(product.getSellerId(), "영상 심사 결과 / Video review: " + decision);
+        mCommunity.notifyUser(new AccountId(product.getSellerId()), "영상 심사 결과 / Video review: " + decision);
         if (decision == EProductDecision.APPROVE && !wasPublished) {
             mCommunity.notifyPublication(product);
         }
@@ -197,7 +199,7 @@ public class OperationsService {
         }
         ticket.resolve(reply, decision == EApprovalDecision.APPROVE ? com.pickview.domain.ETicketStatus.APPROVED : com.pickview.domain.ETicketStatus.REJECTED);
         audit(operator, "TICKET_RESOLVED", id.getValue(), reply);
-        mCommunity.notifyUser(ticket.getUserId(), "문의 처리 완료 / Your request was resolved");
+        mCommunity.notifyUser(new AccountId(ticket.getUserId()), "문의 처리 완료 / Your request was resolved");
     }
 
     @Transactional
@@ -214,13 +216,13 @@ public class OperationsService {
     }
 
     @Transactional
-    public int settle(Account operator, String sellerId) {
+    public int settle(Account operator, AccountId sellerId) {
         requireRole(operator, ERole.FINANCE);
-        if (mEntityManager.find(Account.class, sellerId, LockModeType.PESSIMISTIC_WRITE) == null) {
+        if (mEntityManager.find(Account.class, sellerId.getValue(), LockModeType.PESSIMISTIC_WRITE) == null) {
             throw new ApiFailure(404, "Seller not found");
         }
         LocalDate today = LocalDate.now(mClock.withZone(ZoneId.of("Asia/Seoul")));
-        if (today.getDayOfMonth() < 15) {
+        if (today.getDayOfMonth() < SETTLEMENT_OPEN_DAY) {
             throw new ApiFailure(409, "매월 15일부터 처리 가능합니다. / Settlement opens on the 15th.");
         }
         long cutoff = today.withDayOfMonth(1).atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant().toEpochMilli();
@@ -229,28 +231,28 @@ public class OperationsService {
             .stream()
             .filter(
                 line ->
-                    line.getSellerId().equals(sellerId) &&
+                    line.getSellerId().equals(sellerId.getValue()) &&
                     !line.isRefunded() &&
                     line.getSettlementId().isEmpty() &&
                     mPurchases.findById(line.getPurchaseId()).orElseThrow().getCreatedAt() < cutoff
             )
             .toList();
-        List<RefundAdjustment> adjustments = mAdjustments.findPending(sellerId, "");
+        List<RefundAdjustment> adjustments = mAdjustments.findPending(sellerId.getValue(), "");
         int amount =
             eligible.stream().mapToInt(OrderLine::getSellerAmountWon).sum() -
             adjustments.stream().mapToInt(RefundAdjustment::getAmountWon).sum();
-        if (amount < 10000) {
+        if (amount < MIN_PAYOUT_WON) {
             throw new ApiFailure(409, "정산 가능 금액 1만원 미만은 이월됩니다. / Below payout threshold.");
         }
         String id = UUID.randomUUID().toString();
-        mSettlements.save(new Settlement(id, sellerId, amount, System.currentTimeMillis()));
+        mSettlements.save(new Settlement(id, sellerId.getValue(), amount, System.currentTimeMillis()));
         for (OrderLine line : eligible) {
             line.settle(id);
         }
         for (RefundAdjustment adjustment : adjustments) {
             adjustment.settle(id);
         }
-        audit(operator, "MOCK_SETTLEMENT", sellerId, Integer.toString(amount));
+        audit(operator, "MOCK_SETTLEMENT", sellerId.getValue(), Integer.toString(amount));
         mCommunity.notifyUser(sellerId, "모의 정산 완료 / Mock settlement complete");
         return amount;
     }
@@ -309,10 +311,10 @@ public class OperationsService {
         );
     }
 
-    private boolean canReviewTicket(Ticket ticket, boolean canReviewContent, boolean canHandleSupport) {
+    private boolean canReviewTicket(Account operator, Ticket ticket) {
         return (
-            (canReviewContent && ticket.getKind().equals(com.pickview.domain.ETicketKind.REPORT)) ||
-            (canHandleSupport && List.of(com.pickview.domain.ETicketKind.SUPPORT, com.pickview.domain.ETicketKind.REFUND).contains(ticket.getKind()))
+            (hasRole(operator, ERole.CONTENT) && ticket.getKind().equals(com.pickview.domain.ETicketKind.REPORT)) ||
+            (hasRole(operator, ERole.SUPPORT) && List.of(com.pickview.domain.ETicketKind.SUPPORT, com.pickview.domain.ETicketKind.REFUND).contains(ticket.getKind()))
         );
     }
 
