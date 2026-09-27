@@ -89,7 +89,7 @@ class BoundaryValidationTest {
         Product product = mock(Product.class);
         when(seller.getSellerStatus()).thenReturn("APPROVED");
         when(catalog.requireOwnedProduct(seller, new ProductId("video"))).thenReturn(product);
-        new ThumbnailService(catalog, storage).upload(seller, "video", file);
+        new ThumbnailService(catalog, storage).upload(seller, new ProductId("video"), file);
         assertTrue(isClosed.get());
     }
 }

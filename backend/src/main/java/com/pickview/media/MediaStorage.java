@@ -52,14 +52,16 @@ public class MediaStorage {
             }
             return;
         }
-        Files.copy(source, resolvePath(key), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        try (InputStream stream = Files.newInputStream(source)) {
+            AtomicMediaFile.publish(stream, resolvePath(key));
+        }
     }
 
-    public Path getFile(String key) throws Exception {
+    public synchronized Path getFile(String key) throws Exception {
         Path file = resolvePath(key);
         if (mMode.equals("s3") && !Files.exists(file)) {
             try (InputStream stream = mClient.getObject(GetObjectArgs.builder().bucket(mBucket).object(key).build())) {
-                Files.copy(stream, file, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                AtomicMediaFile.publish(stream, file);
             }
         }
         return file;

@@ -22,6 +22,8 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class ThumbnailService {
 
+    private static final long MAX_THUMBNAIL_BYTES = 5L * 1024 * 1024;
+
     private final CatalogService mCatalog;
     private final MediaStorage mStorage;
 
@@ -31,12 +33,12 @@ public class ThumbnailService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void upload(Account account, String productId, MultipartFile file) throws Exception {
-        Product product = mCatalog.requireOwnedProduct(account, new ProductId(productId));
+    public void upload(Account account, ProductId productId, MultipartFile file) throws Exception {
+        Product product = mCatalog.requireOwnedProduct(account, productId);
         if (!account.getSellerStatus().equals("APPROVED")) {
             throw new ApiFailure(403, "Approved seller required");
         }
-        if (file.isEmpty() || file.getSize() > 5L * 1024 * 1024) {
+        if (file.isEmpty() || file.getSize() > MAX_THUMBNAIL_BYTES) {
             throw new ApiFailure(400, "JPG/PNG up to 5MB required");
         }
         BufferedImage image = decodeImage(file);
@@ -52,8 +54,8 @@ public class ThumbnailService {
         }
     }
 
-    public Path getPublicThumbnail(String id) throws Exception {
-        Product product = mCatalog.requireProduct(new ProductId(id));
+    public Path getPublicThumbnail(ProductId id) throws Exception {
+        Product product = mCatalog.requireProduct(id);
         if (
             !product.getStatus().equals("APPROVED") ||
             product.isBlocked() ||

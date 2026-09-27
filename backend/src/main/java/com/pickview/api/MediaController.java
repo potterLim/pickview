@@ -1,6 +1,9 @@
 package com.pickview.api;
 
 import com.pickview.media.MediaService;
+import com.pickview.domain.ProductId;
+import com.pickview.domain.AccountId;
+import com.pickview.domain.VideoDuration;
 import com.pickview.media.ThumbnailService;
 import com.pickview.security.AccountService;
 import java.nio.file.Path;
@@ -31,7 +34,7 @@ public class MediaController {
     @PostMapping("/api/seller/products/{id}/thumbnail")
     public void uploadThumbnail(Principal principal, @PathVariable String id, @RequestParam MultipartFile file)
         throws Exception {
-        mThumbnails.upload(mAccounts.requireAccount(principal.getName()), id, file);
+        mThumbnails.upload(mAccounts.requireAccount(principal.getName()), new ProductId(id), file);
     }
 
     @GetMapping("/api/public/thumbnails/{id}")
@@ -39,7 +42,7 @@ public class MediaController {
         return ResponseEntity.ok()
             .header("Content-Type", "image/png")
             .header("Cache-Control", "no-cache")
-            .body(new FileSystemResource(mThumbnails.getPublicThumbnail(id)));
+            .body(new FileSystemResource(mThumbnails.getPublicThumbnail(new ProductId(id))));
     }
 
     @PostMapping("/api/seller/products/{id}/upload")
@@ -49,19 +52,19 @@ public class MediaController {
         @RequestParam MultipartFile file,
         @RequestParam double previewSeconds
     ) throws Exception {
-        mMedia.uploadVideo(mAccounts.requireAccount(principal.getName()), id, file, previewSeconds);
+        mMedia.uploadVideo(mAccounts.requireAccount(principal.getName()), new ProductId(id), file, new VideoDuration(previewSeconds));
     }
 
     @PostMapping("/api/media/ticket/{id}")
     public Map<String, String> issueTicket(Principal principal, @PathVariable String id) {
-        return Map.of("path", "/api/media/stream/" + mMedia.issueTicket(principal.getName(), id));
+        return Map.of("path", "/api/media/stream/" + mMedia.issueTicket(new AccountId(principal.getName()), new ProductId(id)));
     }
 
     @PostMapping("/api/media/review/{id}")
     public Map<String, String> issueReviewTicket(Principal principal, @PathVariable String id) {
         return Map.of(
             "path",
-            "/api/media/stream/" + mMedia.issueReviewTicket(mAccounts.requireAccount(principal.getName()), id)
+            "/api/media/stream/" + mMedia.issueReviewTicket(mAccounts.requireAccount(principal.getName()), new ProductId(id))
         );
     }
 
@@ -72,7 +75,7 @@ public class MediaController {
 
     @GetMapping("/api/public/preview/{id}")
     public ResponseEntity<FileSystemResource> getPreview(@PathVariable String id) throws Exception {
-        return serveVideo(mMedia.getPreview(id));
+        return serveVideo(mMedia.getPreview(new ProductId(id)));
     }
 
     private ResponseEntity<FileSystemResource> serveVideo(Path file) {

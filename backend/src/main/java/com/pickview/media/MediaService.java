@@ -7,6 +7,9 @@ import com.pickview.catalog.CatalogService;
 import com.pickview.commerce.CommerceService;
 import com.pickview.domain.AccountId;
 import com.pickview.domain.ProductId;
+import com.pickview.domain.VideoDuration;
+import java.time.Duration;
+import java.time.Instant;
 import com.pickview.model.Account;
 import com.pickview.model.Product;
 import com.pickview.repository.IAccountRepository;
@@ -24,6 +27,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class MediaService {
+
+    private static final long MAX_VIDEO_BYTES = 100L * 1024 * 1024;
+    private static final Duration TRANSCODE_TIMEOUT = Duration.ofMinutes(2);
+    private static final Duration PROBE_TIMEOUT = Duration.ofSeconds(30);
+    private static final Duration PLAYBACK_TTL = Duration.ofHours(2);
+    private static final Duration REVIEW_TTL = Duration.ofMinutes(15);
 
     private final MediaStorage mStorage;
     private final CatalogService mCatalog;
@@ -53,25 +62,24 @@ public class MediaService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void uploadVideo(Account seller, String productId, MultipartFile file, double previewSeconds)
+    public void uploadVideo(Account seller, ProductId productId, MultipartFile file, VideoDuration previewDuration)
         throws Exception {
-        Product product = mCatalog.requireOwnedProduct(seller, new ProductId(productId));
+        Product product = mCatalog.requireOwnedProduct(seller, productId);
         if (!seller.getSellerStatus().equals("APPROVED") || !product.getKind().equals("VIDEO")) {
             throw new ApiFailure(403, "Seller video required");
         }
-        if (file.isEmpty() || file.getSize() > 100L * 1024 * 1024) {
+        if (file.isEmpty() || file.getSize() > MAX_VIDEO_BYTES) {
             throw new ApiFailure(400, "100MB 이하 MP4를 선택하세요. / MP4 up to 100MB.");
         }
-        Path source = Files.createTempFile("pickview-upload-", ".mp4");
-        Path preview = Files.createTempFile("pickview-preview-", ".mp4");
-        try {
+        try (
+            TemporaryFile sourceFile = new TemporaryFile("pickview-upload-", ".mp4");
+            TemporaryFile previewFile = new TemporaryFile("pickview-preview-", ".mp4")
+        ) {
+            Path source = sourceFile.getPath();
+            Path preview = previewFile.getPath();
             file.transferTo(source);
-            double duration = validateVideo(source);
-            if (
-                !Double.isFinite(previewSeconds) || previewSeconds <= 0 || previewSeconds > Math.min(60, duration * .2)
-            ) {
-                throw new ApiFailure(400, "미리보기는 전체의 20% 이내, 최대 60초입니다. / Preview limit exceeded.");
-            }
+            VideoDuration duration = validateVideo(source);
+            duration.requireValidPreview(previewDuration);
             runProcess(
                 List.of(
                     mFfmpeg,
@@ -79,7 +87,7 @@ public class MediaService {
                     "-i",
                     source.toString(),
                     "-t",
-                    Double.toString(previewSeconds),
+                    Double.toString(previewDuration.getSeconds()),
                     "-c:v",
                     "libx264",
                     "-preset",
@@ -90,77 +98,74 @@ public class MediaService {
                     "+faststart",
                     preview.toString()
                 ),
-                120
+                TRANSCODE_TIMEOUT
             );
             String key = UUID.randomUUID().toString();
             mStorage.storeFile(key + ".mp4", source, "video/mp4");
             mStorage.storeFile(key + "-preview.mp4", preview, "video/mp4");
-            product.replaceMedia(key + ".mp4", key + "-preview.mp4", duration);
-        } finally {
-            Files.deleteIfExists(source);
-            Files.deleteIfExists(preview);
+            product.replaceMedia(key + ".mp4", key + "-preview.mp4", duration.getSeconds());
         }
     }
 
-    public String issueTicket(String buyerId, String productId) {
-        Product product = mCatalog.requireProduct(new ProductId(productId));
-        if (product.isBlocked() || !mCommerce.canWatch(new AccountId(buyerId), new ProductId(productId))) {
+    public String issueTicket(AccountId buyerId, ProductId productId) {
+        Product product = mCatalog.requireProduct(productId);
+        if (product.isBlocked() || !mCommerce.canWatch(buyerId, productId)) {
             throw new ApiFailure(403, "시청 권한이 없습니다. / Playback access denied.");
         }
-        mTickets.entrySet().removeIf(entry -> entry.getValue().expiresAt() < System.currentTimeMillis());
+        mTickets.entrySet().removeIf(entry -> entry.getValue().getExpiresAt() < System.currentTimeMillis());
         String token = UUID.randomUUID().toString();
         mTickets.put(
             token,
-            new PlaybackTicket(buyerId, productId, System.currentTimeMillis() + 2 * 60 * 60 * 1000L, false)
+            new PlaybackTicket(buyerId, productId, Instant.now().plus(PLAYBACK_TTL).toEpochMilli(), false)
         );
         return token;
     }
 
-    public String issueReviewTicket(Account account, String productId) {
-        Product product = mCatalog.requireProduct(new ProductId(productId));
+    public String issueReviewTicket(Account account, ProductId productId) {
+        Product product = mCatalog.requireProduct(productId);
         if (!canInspect(account, product) || product.getMediaKey().isBlank()) {
             throw new ApiFailure(403, "Review access denied");
         }
-        mTickets.entrySet().removeIf(entry -> entry.getValue().expiresAt() < System.currentTimeMillis());
+        mTickets.entrySet().removeIf(entry -> entry.getValue().getExpiresAt() < System.currentTimeMillis());
         String token = UUID.randomUUID().toString();
         mTickets.put(
             token,
-            new PlaybackTicket(account.getId(), productId, System.currentTimeMillis() + 15 * 60 * 1000L, true)
+            new PlaybackTicket(new AccountId(account.getId()), productId, Instant.now().plus(REVIEW_TTL).toEpochMilli(), true)
         );
         return token;
     }
 
     public Path getStream(String token) throws Exception {
         PlaybackTicket ticketOrNull = mTickets.get(token);
-        if (ticketOrNull == null || ticketOrNull.expiresAt() < System.currentTimeMillis()) {
+        if (ticketOrNull == null || ticketOrNull.getExpiresAt() < System.currentTimeMillis()) {
             throw new ApiFailure(403, "Playback link expired");
         }
-        Product product = mCatalog.requireProduct(new ProductId(ticketOrNull.productId()));
-        if (ticketOrNull.review()) {
+        Product product = mCatalog.requireProduct(ticketOrNull.getProductId());
+        if (ticketOrNull.isReview()) {
             Account account = mAccounts
-                .findById(ticketOrNull.buyerId())
+                .findById(ticketOrNull.getBuyerId().getValue())
                 .orElseThrow(() -> new ApiFailure(403, "Account unavailable"));
             if (!canInspect(account, product)) {
                 throw new ApiFailure(403, "Review access revoked");
             }
-        } else if (product.isBlocked() || !mCommerce.canWatch(new AccountId(ticketOrNull.buyerId()), new ProductId(product.getId()))) {
+        } else if (product.isBlocked() || !mCommerce.canWatch(ticketOrNull.getBuyerId(), new ProductId(product.getId()))) {
             throw new ApiFailure(403, "Playback access revoked");
         }
         return mStorage.getFile(product.getMediaKey());
     }
 
-    public Path getPreview(String productId) throws Exception {
-        Product product = mCatalog.requireProduct(new ProductId(productId));
+    public Path getPreview(ProductId productId) throws Exception {
+        Product product = mCatalog.requireProduct(productId);
         if (!product.getStatus().equals("APPROVED") || product.isBlocked() || product.getPreviewKey().isBlank()) {
             throw new ApiFailure(404, "Preview unavailable");
         }
         return mStorage.getFile(product.getPreviewKey());
     }
 
-    private double validateVideo(Path file) throws Exception {
+    private VideoDuration validateVideo(Path file) throws Exception {
         String output = runProcess(
             List.of(mFfprobe, "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", file.toString()),
-            30
+            PROBE_TIMEOUT
         );
         JsonNode metadata = mMapper.readTree(output);
         double duration = metadata.path("format").path("duration").asDouble(0);
@@ -186,26 +191,50 @@ public class MediaService {
         if (!hasVideo || !Double.isFinite(duration) || duration <= 0 || duration > 600) {
             throw new ApiFailure(400, "10분 이하 영상이 필요합니다. / Maximum 10 minutes.");
         }
-        return duration;
+        return new VideoDuration(duration);
     }
 
-    private String runProcess(List<String> command, int timeoutSeconds) throws Exception {
-        Path log = Files.createTempFile("pickview-media-", ".log");
-        try {
+    private String runProcess(List<String> command, Duration timeout) throws Exception {
+        try (TemporaryFile logFile = new TemporaryFile("pickview-media-", ".log")) {
+            Path log = logFile.getPath();
             Process process = new ProcessBuilder(new ArrayList<>(command))
                 .redirectErrorStream(true)
                 .redirectOutput(log.toFile())
                 .start();
-            if (!process.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
-                process.destroyForcibly();
-                throw new ApiFailure(422, "Video processing timed out");
+            try {
+                if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                    throw new ApiFailure(422, "Video processing timed out");
+                }
+                if (process.exitValue() != 0) {
+                    throw new ApiFailure(422, "영상 처리에 실패했습니다. / Video processing failed.");
+                }
+                return Files.readString(log);
+            } catch (InterruptedException failure) {
+                Thread.currentThread().interrupt();
+                throw failure;
+            } finally {
+                stopProcess(process);
             }
-            if (process.exitValue() != 0) {
-                throw new ApiFailure(422, "영상 처리에 실패했습니다. / Video processing failed.");
+        }
+    }
+
+    private void stopProcess(Process process) throws InterruptedException {
+        if (!process.isAlive()) {
+            return;
+        }
+        boolean wasInterrupted = Thread.interrupted();
+        process.destroyForcibly();
+        try {
+            if (!process.waitFor(PROBE_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)) {
+                throw new IllegalStateException("Media process did not terminate");
             }
-            return Files.readString(log);
+        } catch (InterruptedException failure) {
+            wasInterrupted = true;
+            throw failure;
         } finally {
-            Files.deleteIfExists(log);
+            if (wasInterrupted) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
@@ -213,5 +242,33 @@ public class MediaService {
         return List.of("ADMIN", "CONTENT").contains(account.getRole()) || product.getSellerId().equals(account.getId());
     }
 
-    private record PlaybackTicket(String buyerId, String productId, long expiresAt, boolean review) {}
+    private static final class PlaybackTicket {
+        private final AccountId mBuyerId;
+        private final ProductId mProductId;
+        private final long mExpiresAt;
+        private final boolean mIsReview;
+
+        private PlaybackTicket(AccountId buyerId, ProductId productId, long expiresAt, boolean isReview) {
+            mBuyerId = buyerId;
+            mProductId = productId;
+            mExpiresAt = expiresAt;
+            mIsReview = isReview;
+        }
+
+        private AccountId getBuyerId() {
+            return mBuyerId;
+        }
+
+        private ProductId getProductId() {
+            return mProductId;
+        }
+
+        private long getExpiresAt() {
+            return mExpiresAt;
+        }
+
+        private boolean isReview() {
+            return mIsReview;
+        }
+    }
 }
