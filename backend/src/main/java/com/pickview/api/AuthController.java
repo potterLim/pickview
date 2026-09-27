@@ -1,7 +1,9 @@
 package com.pickview.api;
 
 import com.pickview.domain.Password;
+import com.pickview.domain.EmailAddress;
 import com.pickview.security.AccountService;
+import com.pickview.domain.AccountId;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -30,13 +32,13 @@ public class AuthController {
 
     @PostMapping("/api/auth/login")
     public Map<String, String> login(@Valid @RequestBody LoginRequest request) {
-        return Map.of("token", mAccounts.login(request.email(), new Password(request.password())));
+        return Map.of("token", mAccounts.login(new EmailAddress(request.email()), new Password(request.password())));
     }
 
     @PostMapping("/api/auth/register")
     public Map<String, String> register(@Valid @RequestBody RegisterRequest request) {
-        mAccounts.register(request.email(), new Password(request.password()), request.name(), request.isAdult());
-        return Map.of("token", mAccounts.login(request.email(), new Password(request.password())));
+        mAccounts.register(new EmailAddress(request.email()), new Password(request.password()), request.name(), request.isAdult());
+        return Map.of("token", mAccounts.login(new EmailAddress(request.email()), new Password(request.password())));
     }
 
     @PostMapping("/api/auth/logout")
@@ -46,7 +48,7 @@ public class AuthController {
 
     @GetMapping("/api/me")
     public UserView getCurrentUser(Principal principal) {
-        return UserView.createFromAccount(mAccounts.requireAccount(principal.getName()));
+        return UserView.createFromAccount(mAccounts.requireAccount(new AccountId(principal.getName())));
     }
 
     public record LoginRequest(@Email @NotBlank String email, @NotBlank @Size(max = 64) String password) {}

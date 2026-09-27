@@ -2,5 +2,17 @@ package com.pickview.repository;
 
 import com.pickview.model.LoginSession;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import java.util.Optional;
 
-public interface ILoginSessionRepository extends JpaRepository<LoginSession, String> {}
+public interface ILoginSessionRepository extends JpaRepository<LoginSession, String> {
+
+    @Query("select session from LoginSession session where session.mTokenHash = :digest and session.mExpiresAt > :now")
+    Optional<LoginSession> findValidSession(@Param("digest") String digest, @Param("now") long now);
+
+    @Modifying
+    @Query("delete from LoginSession session where session.mTokenHash = :digest")
+    void deleteToken(@Param("digest") String digest);
+}

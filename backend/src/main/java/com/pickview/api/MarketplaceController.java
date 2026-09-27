@@ -65,7 +65,7 @@ public class MarketplaceController {
 
     @GetMapping("/api/public/sellers/{id}")
     public Map<String, String> getSeller(@PathVariable String id) {
-        Account seller = mAccounts.requireAccount(id);
+        Account seller = mAccounts.requireAccount(new AccountId(id));
         return Map.of("id", id, "displayName", seller.getDisplayName(), "bio", seller.getBio());
     }
 
@@ -79,7 +79,7 @@ public class MarketplaceController {
         Principal principal,
         @Valid @RequestBody CommerceService.CheckoutRequest request
     ) {
-        return mCommerce.checkout(mAccounts.requireAccount(principal.getName()), request);
+        return mCommerce.checkout(mAccounts.requireAccount(new AccountId(principal.getName())), request);
     }
 
     @GetMapping("/api/orders")
@@ -99,7 +99,7 @@ public class MarketplaceController {
 
     @PutMapping("/api/activity")
     public void saveActivity(Principal principal, @Valid @RequestBody CommunityService.ActivityRequest request) {
-        mCommunity.saveActivity(mAccounts.requireAccount(principal.getName()), request);
+        mCommunity.saveActivity(mAccounts.requireAccount(new AccountId(principal.getName())), request);
     }
 
     @DeleteMapping("/api/activity/{kind}/{targetId}")
@@ -114,7 +114,7 @@ public class MarketplaceController {
 
     @PostMapping("/api/tickets")
     public void createTicket(Principal principal, @Valid @RequestBody CommunityService.TicketRequest request) {
-        mCommunity.createTicket(mAccounts.requireAccount(principal.getName()), request);
+        mCommunity.createTicket(mAccounts.requireAccount(new AccountId(principal.getName())), request);
     }
 
     @PostMapping("/api/tickets/{id}/reply")
@@ -138,7 +138,7 @@ public class MarketplaceController {
         if (!List.of("ko", "en").contains(request.language()) || request.interests().length() > 100) {
             throw new ApiFailure(400, "Invalid settings");
         }
-        mAccounts.requireAccount(principal.getName()).changeSettings(request.language(), request.interests());
+        mAccounts.requireAccount(new AccountId(principal.getName())).changeSettings(request.language(), request.interests());
     }
 
     @PostMapping("/api/seller/apply")
@@ -152,7 +152,7 @@ public class MarketplaceController {
         ) {
             throw new ApiFailure(400, "Invalid seller profile");
         }
-        Account account = mAccounts.requireAccount(principal.getName());
+        Account account = mAccounts.requireAccount(new AccountId(principal.getName()));
         if (account.getSellerStatus().equals(com.pickview.domain.ESellerStatus.APPROVED)) {
             throw new ApiFailure(409, "Already approved");
         }
@@ -167,7 +167,7 @@ public class MarketplaceController {
     @PutMapping("/api/seller/profile")
     @Transactional
     public void updateSellerProfile(Principal principal, @Valid @RequestBody SellerRequest request) {
-        Account account = mAccounts.requireAccount(principal.getName());
+        Account account = mAccounts.requireAccount(new AccountId(principal.getName()));
         if (!account.getSellerStatus().equals(com.pickview.domain.ESellerStatus.APPROVED)) {
             throw new ApiFailure(403, "Approved seller required");
         }
@@ -182,7 +182,7 @@ public class MarketplaceController {
         Principal principal,
         @Valid @RequestBody CatalogService.ProductRequest request
     ) {
-        return mCatalog.describeProduct(mCatalog.createProduct(mAccounts.requireAccount(principal.getName()), request));
+        return mCatalog.describeProduct(mCatalog.createProduct(mAccounts.requireAccount(new AccountId(principal.getName())), request));
     }
 
     @PutMapping("/api/seller/products/{id}")
@@ -191,12 +191,12 @@ public class MarketplaceController {
         @PathVariable String id,
         @Valid @RequestBody CatalogService.ProductRequest request
     ) {
-        mCatalog.updateProduct(mAccounts.requireAccount(principal.getName()), new ProductId(id), request);
+        mCatalog.updateProduct(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id), request);
     }
 
     @PostMapping("/api/seller/products/{id}/{action}")
     public void publish(Principal principal, @PathVariable String id, @PathVariable String action) {
-        mCatalog.changePublication(mAccounts.requireAccount(principal.getName()), new ProductId(id), EPublicationAction.valueOf(action));
+        mCatalog.changePublication(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id), EPublicationAction.valueOf(action));
     }
 
     @GetMapping("/api/seller/sales")

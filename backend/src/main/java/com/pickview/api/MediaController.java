@@ -34,7 +34,7 @@ public class MediaController {
     @PostMapping("/api/seller/products/{id}/thumbnail")
     public void uploadThumbnail(Principal principal, @PathVariable String id, @RequestParam MultipartFile file)
         throws Exception {
-        mThumbnails.upload(mAccounts.requireAccount(principal.getName()), new ProductId(id), file);
+        mThumbnails.upload(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id), file);
     }
 
     @GetMapping("/api/public/thumbnails/{id}")
@@ -52,7 +52,7 @@ public class MediaController {
         @RequestParam MultipartFile file,
         @RequestParam double previewSeconds
     ) throws Exception {
-        mMedia.uploadVideo(mAccounts.requireAccount(principal.getName()), new ProductId(id), file, new VideoDuration(previewSeconds));
+        mMedia.uploadVideo(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id), file, new VideoDuration(previewSeconds));
     }
 
     @PostMapping("/api/media/ticket/{id}")
@@ -64,7 +64,7 @@ public class MediaController {
     public Map<String, String> issueReviewTicket(Principal principal, @PathVariable String id) {
         return Map.of(
             "path",
-            "/api/media/stream/" + mMedia.issueReviewTicket(mAccounts.requireAccount(principal.getName()), new ProductId(id))
+            "/api/media/stream/" + mMedia.issueReviewTicket(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id))
         );
     }
 

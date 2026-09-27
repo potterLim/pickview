@@ -2,6 +2,8 @@ package com.pickview.security;
 
 import com.pickview.api.ApiFailure;
 import com.pickview.domain.Password;
+import com.pickview.domain.AccountId;
+import com.pickview.domain.EmailAddress;
 import com.pickview.model.Account;
 import com.pickview.model.LoginSession;
 import com.pickview.repository.IAccountRepository;
@@ -32,16 +34,16 @@ public class AccountService {
         mEncoder = encoder;
     }
 
-    public Account requireAccount(String id) {
+    public Account requireAccount(AccountId id) {
         return mAccounts
-            .findById(id)
+            .findById(id.getValue())
             .orElseThrow(() -> new ApiFailure(401, "로그인이 필요합니다. / Sign in required."));
     }
 
     @Transactional
-    public String login(String email, Password password) {
+    public String login(EmailAddress email, Password password) {
         Account account = mAccounts
-            .findByEmail(email.strip().toLowerCase(Locale.ROOT))
+            .findByEmail(email.getValue())
             .orElseThrow(() -> new ApiFailure(401, "이메일 또는 비밀번호를 확인해 주세요. / Invalid credentials."));
         if (!password.matches(mEncoder, account.getPasswordHash())) {
             throw new ApiFailure(401, "이메일 또는 비밀번호를 확인해 주세요. / Invalid credentials.");
@@ -59,7 +61,7 @@ public class AccountService {
     }
 
     @Transactional
-    public Account register(String email, Password password, String name, boolean isAdult) {
+    public Account register(EmailAddress email, Password password, String name, boolean isAdult) {
         if (!isAdult) {
             throw new ApiFailure(
                 400,
@@ -69,7 +71,7 @@ public class AccountService {
         return mAccounts.save(
             new Account(
                 UUID.randomUUID().toString(),
-                email.strip().toLowerCase(Locale.ROOT),
+                email.getValue(),
                 password.encode(mEncoder),
                 name,
                 com.pickview.domain.ERole.BUYER,
@@ -84,12 +86,7 @@ public class AccountService {
     public Account authenticateOrNull(String token) {
         String digest = hashToken(token);
         return mSessions
-            .findAll()
-            .stream()
-            .filter(
-                session -> session.getTokenHash().equals(digest) && session.getExpiresAt() > System.currentTimeMillis()
-            )
-            .findFirst()
+            .findValidSession(digest, System.currentTimeMillis())
             .flatMap(session -> mAccounts.findById(session.getUserId()))
             .orElse(null);
     }
@@ -97,13 +94,7 @@ public class AccountService {
     @Transactional
     public void logout(String token) {
         String digest = hashToken(token);
-        mSessions.deleteAll(
-            mSessions
-                .findAll()
-                .stream()
-                .filter(session -> session.getTokenHash().equals(digest))
-                .toList()
-        );
+        mSessions.deleteToken(digest);
     }
 
     private String hashToken(String token) {

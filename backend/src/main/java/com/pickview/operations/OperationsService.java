@@ -97,7 +97,7 @@ public class OperationsService {
         boolean isAdministrator = operator.getRole().equals(com.pickview.domain.ERole.ADMIN);
         return new DashboardView(
             canReviewContent ? mAccounts.findAll().stream().map(UserView::createFromAccount).toList() : List.of(),
-            canReviewContent ? mProducts.findAll().stream().map(mCatalog::describeProduct).toList() : List.of(),
+            canReviewContent ? mCatalog.describeProducts(mProducts.findAll()) : List.of(),
             mTickets
                 .findAll()
                 .stream()

@@ -56,15 +56,7 @@ public class CommerceService {
     }
 
     public boolean canWatch(AccountId buyerId, ProductId videoId) {
-        return mGrants
-            .findAll()
-            .stream()
-            .anyMatch(
-                grant ->
-                    grant.getBuyerId().equals(buyerId.getValue()) &&
-                    grant.getProductId().equals(videoId.getValue()) &&
-                    grant.isValid(System.currentTimeMillis())
-            );
+        return mGrants.hasValidGrant(buyerId.getValue(), videoId.getValue(), System.currentTimeMillis());
     }
 
     @Transactional

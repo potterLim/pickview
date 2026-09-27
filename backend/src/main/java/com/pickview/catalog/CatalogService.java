@@ -18,6 +18,11 @@ import com.pickview.repository.IAuditRepository;
 import com.pickview.repository.IEngagementRepository;
 import com.pickview.repository.IOrderLineRepository;
 import com.pickview.repository.IProductRepository;
+import com.pickview.repository.IProductRating;
+import com.pickview.repository.IProductSales;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import jakarta.validation.constraints.NotNull;
 import java.util.Arrays;
 import java.util.List;
@@ -55,36 +60,36 @@ public class CatalogService {
     }
 
     public List<ProductView> listPublished() {
-        return mProducts
-            .findAll()
-            .stream()
+        return describeProducts(mProducts.findAll().stream()
             .filter(product -> product.getStatus().equals(com.pickview.domain.EProductStatus.APPROVED) && !product.isBlocked())
-            .map(this::describeProduct)
-            .toList();
+            .toList());
     }
 
     public List<ProductView> listOwned(AccountId sellerId) {
-        return mProducts
-            .findAll()
-            .stream()
-            .filter(product -> product.getSellerId().equals(sellerId.getValue()))
-            .map(this::describeProduct)
-            .toList();
+        return describeProducts(mProducts.findAll().stream()
+            .filter(product -> product.getSellerId().equals(sellerId.getValue())).toList());
     }
 
     public ProductView describeProduct(Product product) {
-        Account seller = mAccounts.findById(product.getSellerId()).orElseThrow();
-        List<Engagement> reviews = mEngagements
-            .findAll()
-            .stream()
-            .filter(item -> item.getKind().equals(com.pickview.domain.EActivityKind.REVIEW) && item.getTargetId().equals(product.getId()))
-            .toList();
-        double rating = reviews.stream().mapToDouble(Engagement::getNumberValue).average().orElse(0);
-        long sales = mLines
-            .findAll()
-            .stream()
-            .filter(line -> line.getProductId().equals(product.getId()) && !line.isRefunded())
-            .count();
+        return describeProducts(List.of(product)).getFirst();
+    }
+
+    public List<ProductView> describeProducts(List<Product> products) {
+        if (products.isEmpty()) {
+            return List.of();
+        }
+        List<String> ids = products.stream().map(Product::getId).toList();
+        Map<String, Account> sellersById = mAccounts.findAllById(products.stream().map(Product::getSellerId).distinct().toList())
+            .stream().collect(Collectors.toMap(Account::getId, Function.identity()));
+        Map<String, IProductRating> ratingsById = mEngagements.summarizeReviews(ids).stream()
+            .collect(Collectors.toMap(IProductRating::getProductId, Function.identity()));
+        Map<String, IProductSales> salesById = mLines.summarizeSales(ids).stream()
+            .collect(Collectors.toMap(IProductSales::getProductId, Function.identity()));
+        return products.stream().map(product -> createProductView(product, sellersById.get(product.getSellerId()),
+            ratingsById.get(product.getId()), salesById.get(product.getId()))).toList();
+    }
+
+    private ProductView createProductView(Product product, Account seller, IProductRating ratingOrNull, IProductSales salesOrNull) {
         return new ProductView(
             product.getId(),
             product.getSellerId(),
@@ -99,9 +104,9 @@ public class CatalogService {
             product.getDurationSeconds(),
             product.getKind(),
             expandVideoIds(product).stream().map(ProductId::getValue).toList(),
-            rating,
-            reviews.size(),
-            sales,
+            ratingOrNull == null ? 0 : ratingOrNull.getRating(),
+            ratingOrNull == null ? 0 : ratingOrNull.getReviewCount(),
+            salesOrNull == null ? 0 : salesOrNull.getSales(),
             product.getCreatedAt(),
             product.isBlocked(),
             product.getTags(),

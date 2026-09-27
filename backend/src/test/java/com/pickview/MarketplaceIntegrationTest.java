@@ -58,38 +58,61 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class MarketplaceIntegrationTest {
 
-    @Autowired
-    private IAccountRepository mAccounts;
+    private final IAccountRepository mAccounts;
 
-    @Autowired
-    private IProductRepository mProducts;
+    private final IProductRepository mProducts;
 
-    @Autowired
-    private IPurchaseRepository mPurchases;
+    private final IPurchaseRepository mPurchases;
 
-    @Autowired
-    private IOrderLineRepository mLines;
+    private final IOrderLineRepository mLines;
 
-    @Autowired
-    private IGrantRepository mGrants;
+    private final IGrantRepository mGrants;
 
-    @Autowired
-    private ITicketRepository mTickets;
+    private final ITicketRepository mTickets;
 
-    @Autowired
-    private IRefundAdjustmentRepository mAdjustments;
+    private final IRefundAdjustmentRepository mAdjustments;
 
-    @Autowired
-    private CommerceService mCommerce;
+    private final CommerceService mCommerce;
 
-    @Autowired
-    private CommunityService mCommunity;
+    private final CommunityService mCommunity;
 
-    @Autowired
-    private OperationsService mOperations;
+    private final OperationsService mOperations;
+
+    private final com.pickview.catalog.CatalogService mCatalog;
+
+    private final com.pickview.security.AccountService mAccountService;
 
     private Account mBuyer;
     private Account mAdmin;
+
+    @Autowired
+    MarketplaceIntegrationTest(
+        IAccountRepository accounts,
+        IProductRepository products,
+        IPurchaseRepository purchases,
+        IOrderLineRepository lines,
+        IGrantRepository grants,
+        ITicketRepository tickets,
+        IRefundAdjustmentRepository adjustments,
+        CommerceService commerce,
+        CommunityService community,
+        OperationsService operations,
+        com.pickview.catalog.CatalogService catalog,
+        com.pickview.security.AccountService accountService
+    ) {
+        mAccounts = accounts;
+        mProducts = products;
+        mPurchases = purchases;
+        mLines = lines;
+        mGrants = grants;
+        mTickets = tickets;
+        mAdjustments = adjustments;
+        mCommerce = commerce;
+        mCommunity = community;
+        mOperations = operations;
+        mCatalog = catalog;
+        mAccountService = accountService;
+    }
 
     @BeforeEach
     void prepareMarketplace() {
@@ -199,6 +222,27 @@ class MarketplaceIntegrationTest {
         assertEquals(1, mCommunity.listTickets("buyer").size());
     }
 
+    @Test
+    void catalogAggregatesReviewsAndSalesForAllProducts() {
+        saveHistoricalLine("sale", 20000, "");
+        mCommunity.saveActivity(mBuyer, new CommunityService.ActivityRequest("video", EActivityKind.REVIEW, "Useful", 4));
+        com.pickview.catalog.CatalogService.ProductView product = mCatalog.listPublished().getFirst();
+        assertEquals(4.0, product.rating());
+        assertEquals(1, product.reviewCount());
+        assertEquals(1, product.sales());
+    }
+
+    @Test
+    void authenticationFindsOnlyValidTokensAndLogoutRevokesThem() {
+        com.pickview.domain.EmailAddress email = new com.pickview.domain.EmailAddress("  USER@Test.local  ");
+        com.pickview.domain.Password password = new com.pickview.domain.Password("Valid-password-2026!");
+        Account account = mAccountService.register(email, password, "User", true);
+        String token = mAccountService.login(email, password);
+        assertEquals(account.getId(), mAccountService.authenticateOrNull(token).getId());
+        mAccountService.logout(token);
+        org.junit.jupiter.api.Assertions.assertNull(mAccountService.authenticateOrNull(token));
+    }
+
     private Account saveAccount(String id, String role) {
         return mAccounts.save(new Account(id, id + "@test.local", "unused", id, com.pickview.domain.ERole.valueOf(role), com.pickview.domain.ESellerStatus.APPROVED, "", "ko", ""));
     }
@@ -238,7 +282,7 @@ class MarketplaceIntegrationTest {
 
         @Bean
         @Primary
-        Clock fixedClock() {
+        Clock createFixedClock() {
             return Clock.fixed(Instant.parse("2026-09-26T00:00:00Z"), ZoneOffset.UTC);
         }
     }
