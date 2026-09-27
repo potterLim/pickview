@@ -1,27 +1,30 @@
+import type { ProductId, AccountId } from "./identifiers";
+import type { ERole, ESellerStatus, EProductKind, ECategory, EProductStatus, EActivityKind, ETicketKind, ETicketStatus, EPaymentChannel, EOrderStatus } from "./domain";
+
 export interface IUser {
-    id: string;
+    id: AccountId;
     email: string;
     displayName: string;
-    role: string;
-    sellerStatus: string;
+    role: `${ERole}`;
+    sellerStatus: `${ESellerStatus}`;
     bio: string;
     language: string;
     interests: string;
 }
 export interface IProduct {
-    id: string;
-    sellerId: string;
+    id: ProductId;
+    sellerId: AccountId;
     sellerName: string;
     title: string;
     description: string;
-    category: string;
+    category: `${ECategory}`;
     priceWon: number;
     termDays: number;
-    status: string;
+    status: `${EProductStatus}`;
     thumbnail: string;
     durationSeconds: number;
-    kind: string;
-    videoIds: string[];
+    kind: `${EProductKind}`;
+    videoIds: ProductId[];
     rating: number;
     reviewCount: number;
     sales: number;
@@ -33,7 +36,7 @@ export interface IProduct {
 export interface IActivity {
     id: string;
     targetId: string;
-    kind: string;
+    kind: `${EActivityKind}`;
     content: string;
     numberValue: number;
     author: string;
@@ -46,7 +49,7 @@ export interface ILibraryItem {
 }
 export interface IOrderLine {
     id: string;
-    productId: string;
+    productId: ProductId;
     title: string;
     priceWon: number;
     channelFeeWon: number;
@@ -58,8 +61,8 @@ export interface IOrderLine {
 }
 export interface IOrder {
     id: string;
-    status: string;
-    channel: string;
+    status: `${EOrderStatus}`;
+    channel: `${EPaymentChannel}`;
     createdAt: number;
     lines: IOrderLine[];
     totalWon: number;
@@ -69,9 +72,9 @@ export interface ITicket {
     userId: string;
     targetId: string;
     recipientId: string;
-    kind: string;
+    kind: `${ETicketKind}`;
     message: string;
-    status: string;
+    status: `${ETicketStatus}`;
     reply: string;
     createdAt: number;
 }

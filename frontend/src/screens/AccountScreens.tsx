@@ -1,7 +1,9 @@
+import { decodeArray } from "../core/validation";
+import { decodeSeller, decodeTicket, decodeNotice } from "../core/contracts";
 import { useEffect, useState, type ComponentProps } from "react";
 import { Text, View, Pressable, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { request } from "../core/api";
+import { request, read } from "../core/api";
 import { useStore } from "../core/Store";
 import type { INotice, ITicket } from "../core/types";
 import { Button, Field, Choice, Loading } from "../ui/Controls";
@@ -20,7 +22,7 @@ export function SellerScreen() {
         }
         const controller = new AbortController();
         setBio("");
-        request<{ bio: string }>(`/public/sellers/${selected.sellerId}`, "", "GET", undefined, controller.signal)
+        read(decodeSeller, `/public/sellers/${selected.sellerId}`, "", "GET", undefined, controller.signal)
             .then((value) => setBio(value.bio.replace(/^(PERSONAL|BUSINESS):\s*/, "")))
             .catch(() => {
                 if (!controller.signal.aborted) {
@@ -97,8 +99,8 @@ export function InboxScreen() {
     const unread = notices.filter((notice) => !notice.read).length;
     async function reload(signal?: AbortSignal) {
         const [newTickets, newNotices] = await Promise.all([
-            request<ITicket[]>("/tickets", token, "GET", undefined, signal),
-            request<INotice[]>("/notices", token, "GET", undefined, signal),
+            read(decodeArray(decodeTicket), "/tickets", token, "GET", undefined, signal),
+            read(decodeArray(decodeNotice), "/notices", token, "GET", undefined, signal),
         ]);
         if (signal?.aborted) {
             return;

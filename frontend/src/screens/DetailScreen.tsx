@@ -1,8 +1,10 @@
+import { decodeArray } from "../core/validation";
+import { decodeActivity, decodePath } from "../core/contracts";
 import { useEffect, useState } from "react";
 import { Text, View, Pressable, Share, Platform, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useStore } from "../core/Store";
-import { API_URL, request } from "../core/api";
+import { API_URL, request, read } from "../core/api";
 import { categoryLabel, getDemoContentOrNull, productTitle } from "../core/presentation";
 import type { IActivity } from "../core/types";
 import { Button, Field } from "../ui/Controls";
@@ -50,7 +52,7 @@ export function DetailScreen() {
             return;
         }
         const abort = new AbortController();
-        request<IActivity[]>(`/public/products/${product.id}/reviews`, "", "GET", undefined, abort.signal)
+        read(decodeArray(decodeActivity), `/public/products/${product.id}/reviews`, "", "GET", undefined, abort.signal)
             .then((value) => {
                 if (!abort.signal.aborted) {
                     setReviews(value);
@@ -77,7 +79,7 @@ export function DetailScreen() {
             return;
         }
         if (owned) {
-            const result = await request<{ path: string }>(`/media/ticket/${product.id}`, token, "POST");
+            const result = await read(decodePath, `/media/ticket/${product.id}`, token, "POST");
             setUri(API_URL + result.path);
             setFull(true);
         } else {
@@ -95,7 +97,7 @@ export function DetailScreen() {
             content: review,
             numberValue: rating,
         });
-        setReviews(await request<IActivity[]>(`/public/products/${product.id}/reviews`, ""));
+        setReviews(await read(decodeArray(decodeActivity), `/public/products/${product.id}/reviews`, ""));
         setReview("");
         notify(t("소중한 감상을 남겨 주셔서 고마워요.", "Thanks for sharing your thoughts."));
     }

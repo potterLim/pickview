@@ -1,6 +1,11 @@
+import type { ProductId } from "./identifiers";
+import { getErrorMessage } from "./validation";
+import { decodeArray } from "./validation";
+import { decodeProduct, decodeUser, decodeActivity, decodeLibraryItem } from "./contracts";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { clearLocalSession } from "./session";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ApiError, request } from "./api";
+import { ApiError, request, read } from "./api";
 import type { IActivity, ILibraryItem, IProduct, IUser, Language, Route } from "./types";
 
 interface IStore {
@@ -24,8 +29,8 @@ interface IStore {
     notify: (message: string) => void;
     toggle: (kind: string, targetId: string) => Promise<void>;
     hasActivity: (kind: string, targetId: string) => boolean;
-    addToCart: (productId: string, openCart?: boolean) => Promise<void>;
-    rememberProgress: (productId: string, seconds: number) => void;
+    addToCart: (productId: ProductId, openCart?: boolean) => Promise<void>;
+    rememberProgress: (productId: ProductId, seconds: number) => void;
 }
 const Store = createContext<IStore | null>(null);
 
@@ -51,7 +56,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         refreshController.current = controller;
         const signal = controller.signal;
         try {
-            const catalog = await request<IProduct[]>("/public/products", "", "GET", undefined, signal);
+            const catalog = await read(decodeArray(decodeProduct), "/public/products", "", "GET", undefined, signal);
             if (signal.aborted) {
                 return;
             }
@@ -63,9 +68,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 return;
             }
             const [currentUser, currentActivity, currentLibrary] = await Promise.all([
-                request<IUser>("/me", token, "GET", undefined, signal),
-                request<IActivity[]>("/activity", token, "GET", undefined, signal),
-                request<ILibraryItem[]>("/library", token, "GET", undefined, signal),
+                read(decodeUser, "/me", token, "GET", undefined, signal),
+                read(decodeArray(decodeActivity), "/activity", token, "GET", undefined, signal),
+                read(decodeArray(decodeLibraryItem), "/library", token, "GET", undefined, signal),
             ]);
             if (signal.aborted) {
                 return;
@@ -78,12 +83,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 return;
             }
             if (error instanceof ApiError && error.status === 401) {
-                await AsyncStorage.removeItem("pickview.token");
-                setToken("");
-                setUser(null);
-                setActivity([]);
-                setLibrary([]);
-                setRoute("login");
+                await clearLocalSession(() => {
+                    setToken("");
+                    setUser(null);
+                    setActivity([]);
+                    setLibrary([]);
+                    setSelected(null);
+                    setRoute("login");
+                }, () => AsyncStorage.removeItem("pickview.token"));
             }
             throw error;
         }
@@ -100,7 +107,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
     }, [user?.id, user?.language]);
     useEffect(() => {
-        refresh().catch((error) => setMessage(String(error.message)));
+        refresh().catch((error: unknown) => setMessage(getErrorMessage(error)));
         return () => refreshController.current?.abort();
     }, [refresh]);
     useEffect(() => {
@@ -141,7 +148,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         try {
             await request("/auth/logout", token, "POST");
         } finally {
-            await AsyncStorage.removeItem("pickview.token");
+            await clearLocalSession(() => {
             setToken("");
             setUser(null);
             setActivity([]);
@@ -149,6 +156,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             setSelected(null);
             setMessage("");
             setRoute("discover");
+            intendedRoute.current = null;
+            pendingActivity.current = null;
+            }, () => AsyncStorage.removeItem("pickview.token"));
         }
     }
     async function run(action: () => Promise<void>) {
@@ -181,7 +191,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
         await refresh();
     }
-    async function addToCart(productId: string, openCart = false) {
+    async function addToCart(productId: ProductId, openCart = false) {
         if (!token) {
             pendingActivity.current = { kind: "CART", targetId: productId };
             intendedRoute.current = openCart ? "cart" : "detail";
@@ -203,7 +213,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             setMessage(t("장바구니에 담았어요. 원하는 때에 결제하세요.", "Added to your cart. Ready when you are."));
         }
     }
-    function rememberProgress(productId: string, seconds: number) {
+    function rememberProgress(productId: ProductId, seconds: number) {
         setActivity((previous) => [
             ...previous.filter((item) => !(item.kind === "PROGRESS" && item.targetId === productId)),
             {

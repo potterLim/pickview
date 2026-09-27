@@ -1,6 +1,8 @@
+import { decodeArray } from "../core/validation";
+import { decodeOrder, decodeTicket } from "../core/contracts";
 import { useEffect, useState, useRef } from "react";
 import { Text, View, useWindowDimensions } from "react-native";
-import { request } from "../core/api";
+import { request, read } from "../core/api";
 import { useStore } from "../core/Store";
 import type { IOrder, ITicket } from "../core/types";
 import { durationLabel, statusLabel } from "../core/presentation";
@@ -26,7 +28,7 @@ export function CartScreen() {
         if (requestKey.current.fingerprint !== fingerprint) {
             requestKey.current = { fingerprint, key: `demo-${Date.now()}-${Math.random().toString(36).slice(2)}` };
         }
-        const order = await request<IOrder>("/checkout", token, "POST", {
+        const order = await read(decodeOrder, "/checkout", token, "POST", {
             productIds,
             requestKey: requestKey.current.key,
             channel,
@@ -327,8 +329,8 @@ export function OrdersScreen() {
     const [error, setError] = useState("");
     async function loadOrders(signal?: AbortSignal) {
         const [newOrders, newTickets] = await Promise.all([
-            request<IOrder[]>("/orders", token, "GET", undefined, signal),
-            request<ITicket[]>("/tickets", token, "GET", undefined, signal),
+            read(decodeArray(decodeOrder), "/orders", token, "GET", undefined, signal),
+            read(decodeArray(decodeTicket), "/tickets", token, "GET", undefined, signal),
         ]);
         if (signal?.aborted) {
             return;
@@ -356,7 +358,7 @@ export function OrdersScreen() {
         await request("/tickets", token, "POST", { kind: "REFUND", targetId: selectedLine, message: reason.trim() });
         setSelectedLine("");
         setReason("");
-        setTickets(await request<ITicket[]>("/tickets", token));
+        setTickets(await read(decodeArray(decodeTicket), "/tickets", token));
         notify(
             t(
                 "환불 요청을 접수했어요. 문의함에서 처리 상태를 확인할 수 있습니다.",

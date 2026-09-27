@@ -1,7 +1,9 @@
+import { getErrorMessage } from "../core/validation";
+import { decodeDashboard } from "../core/contracts";
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { useStore } from "../core/Store";
-import { request } from "../core/api";
+import { request, read } from "../core/api";
 import type { IDashboard } from "../core/types";
 import { Button, Field, Loading } from "../ui/Controls";
 import { money, styles } from "../ui/theme";
@@ -9,22 +11,41 @@ import { statusLabel } from "../core/presentation";
 import { InspectionPlayer } from "../ui/InspectionPlayer";
 
 export function AdminScreen() {
-    const { token, user, t, language, run, refresh, notify } = useStore();
+    const { token, user, t, language, run, refresh } = useStore();
     const [dashboard, setDashboard] = useState<IDashboard | null>(null);
     const [reply, setReply] = useState("");
     const [sellerId, setSellerId] = useState("seller");
     const [roleId, setRoleId] = useState("");
     const [role, setRole] = useState("CONTENT");
-    async function reload() {
-        setDashboard(await request<IDashboard>("/admin/dashboard", token));
+    const [loadError, setLoadError] = useState("");
+    async function reload(signal?: AbortSignal) {
+        const result = await read(decodeDashboard, "/admin/dashboard", token, "GET", undefined, signal);
+        if (!signal?.aborted) {
+            setDashboard(result);
+            setLoadError("");
+        }
     }
     useEffect(() => {
-        reload().catch((error) => notify(error.message));
+        const controller = new AbortController();
+        setDashboard(null);
+        setLoadError("");
+        reload(controller.signal).catch((error: unknown) => {
+            if (!controller.signal.aborted) {
+                setLoadError(getErrorMessage(error));
+            }
+        });
+        return () => controller.abort();
     }, [token]);
     async function decide(path: string, body: unknown) {
         await request(path, token, "POST", body);
         await reload();
         await refresh();
+    }
+    if (loadError) {
+        return <View style={styles.page}>
+            <Text style={styles.text}>{loadError}</Text>
+            <Button label={t("다시 시도", "Retry")} onPress={() => run(() => reload())} />
+        </View>;
     }
     if (!dashboard) {
         return <Loading />;

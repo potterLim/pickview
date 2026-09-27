@@ -1,8 +1,14 @@
-import { useEffect, useState } from "react";
+import { ProductDraft, type IProductInput } from "../core/ProductDraft";
+import type { ProductId } from "../core/identifiers";
+import { ECategory, EProductKind } from "../core/domain";
+import { getErrorMessage } from "../core/validation";
+import { decodeArray } from "../core/validation";
+import { decodeProduct, decodeOrderLine, decodeSettlementSummary } from "../core/contracts";
+import { useEffect, useState, useRef } from "react";
 import { Text, View, Platform } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { useStore } from "../core/Store";
-import { API_URL, request } from "../core/api";
+import { API_URL, request, read, requireSuccessfulResponse } from "../core/api";
 import type { IOrderLine, IProduct, ISettlementSummary } from "../core/types";
 import { Button, Field, Choice } from "../ui/Controls";
 import { colors, money, styles } from "../ui/theme";
@@ -23,9 +29,9 @@ export function StudioScreen() {
     const [type, setType] = useState(user?.bio.startsWith("BUSINESS:") ? "BUSINESS" : "PERSONAL");
     async function reload(signal?: AbortSignal) {
         const [catalog, lines, summary] = await Promise.all([
-            request<IProduct[]>("/seller/products", token, "GET", undefined, signal),
-            request<IOrderLine[]>("/seller/sales", token, "GET", undefined, signal),
-            request<ISettlementSummary>("/seller/settlements", token, "GET", undefined, signal),
+            read(decodeArray(decodeProduct), "/seller/products", token, "GET", undefined, signal),
+            read(decodeArray(decodeOrderLine), "/seller/sales", token, "GET", undefined, signal),
+            read(decodeSettlementSummary, "/seller/settlements", token, "GET", undefined, signal),
         ]);
         if (signal?.aborted) {
             return;
@@ -39,9 +45,9 @@ export function StudioScreen() {
             return;
         }
         const controller = new AbortController();
-        reload(controller.signal).catch((error) => {
+        reload(controller.signal).catch((error: unknown) => {
             if (!controller.signal.aborted) {
-                notify(error.message);
+                notify(getErrorMessage(error));
             }
         });
         return () => controller.abort();
@@ -110,7 +116,7 @@ export function StudioScreen() {
                         value={bio}
                         onChangeText={setBio}
                         editable={!pending}
-                        maxLength={2000}
+                        maxLength={1000}
                         multiline
                     />
                     <View style={{ gap: 8 }}>
@@ -329,6 +335,8 @@ function ProductEditor({
     onCancel: () => void;
 }) {
     const { token, t, language, run, busy, notify } = useStore();
+    const draft = useRef(new ProductDraft(product?.id ?? null));
+    const [hasPersistedProduct, setHasPersistedProduct] = useState(product !== null);
     const [title, setTitle] = useState(product?.title ?? "");
     const [description, setDescription] = useState(product?.description ?? "");
     const [tags, setTags] = useState(product?.tags ?? "");
@@ -336,7 +344,7 @@ function ProductEditor({
     const [term, setTerm] = useState(product?.termDays ?? 30);
     const [category, setCategory] = useState(product?.category ?? "EDUCATION");
     const [kind, setKind] = useState(product?.kind ?? "VIDEO");
-    const [ids, setIds] = useState<string[]>(product?.kind === "BUNDLE" ? product.videoIds : []);
+    const [ids, setIds] = useState<ProductId[]>(product?.kind === "BUNDLE" ? product.videoIds : []);
     const [rights, setRights] = useState(false);
     const [file, setFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
     const [thumbnail, setThumbnail] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
@@ -357,7 +365,7 @@ function ProductEditor({
         }
     }
     async function save() {
-        const payload = {
+        const payload: IProductInput = {
             title,
             description,
             tags,
@@ -369,13 +377,8 @@ function ProductEditor({
             hasRights: rights,
             thumbnail: product?.thumbnail ?? "studio",
         };
-        let id = product?.id;
-        if (id) {
-            await request(`/seller/products/${id}`, token, "PUT", payload);
-        } else {
-            const created = await request<IProduct>("/seller/products", token, "POST", payload);
-            id = created.id;
-        }
+        const id = await draft.current.save(payload, token);
+        setHasPersistedProduct(true);
         if (thumbnail) {
             const body = new FormData();
             if (Platform.OS === "web") {
@@ -392,10 +395,7 @@ function ProductEditor({
                 headers: { Authorization: `Bearer ${token}` },
                 body,
             });
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message ?? "Thumbnail upload failed");
-            }
+            await requireSuccessfulResponse(response);
         }
         if (file && kind === "VIDEO") {
             const body = new FormData();
@@ -411,10 +411,7 @@ function ProductEditor({
                 headers: { Authorization: `Bearer ${token}` },
                 body,
             });
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message ?? "Upload failed");
-            }
+            await requireSuccessfulResponse(response);
         }
         notify(t("저장했어요. 영상 업로드 시 검수 대기로 전환됩니다.", "Saved. Uploaded videos await review."));
         await onDone();
@@ -437,7 +434,7 @@ function ProductEditor({
                 onChangeText={setTags}
             />
             <View style={styles.row}>
-                {["EDUCATION", "FINANCE", "COMEDY"].map((value) => (
+                {Object.values(ECategory).map((value) => (
                     <Choice
                         key={value}
                         label={categoryLabel(value, language)}
@@ -457,9 +454,9 @@ function ProductEditor({
                     />
                 ))}
             </View>
-            {!product ? (
+            {!hasPersistedProduct ? (
                 <View style={styles.row}>
-                    {["VIDEO", "BUNDLE"].map((value) => (
+                    {Object.values(EProductKind).map((value) => (
                         <Choice
                             key={value}
                             label={statusLabel(value, language)}

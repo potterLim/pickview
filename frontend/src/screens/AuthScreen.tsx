@@ -1,7 +1,8 @@
+import { decodeToken } from "../core/contracts";
 import { useState } from "react";
 import { Platform, Text, View } from "react-native";
 import { useStore } from "../core/Store";
-import { request } from "../core/api";
+import { read } from "../core/api";
 import { Button, Field } from "../ui/Controls";
 import { styles } from "../ui/theme";
 
@@ -13,7 +14,7 @@ export function AuthScreen() {
     const [register, setRegister] = useState(false);
     const [adult, setAdult] = useState(false);
     async function submit() {
-        const result = await request<{ token: string }>(register ? "/auth/register" : "/auth/login", "", "POST", {
+        const result = await read(decodeToken, register ? "/auth/register" : "/auth/login", "", "POST", {
             email,
             password,
             name,

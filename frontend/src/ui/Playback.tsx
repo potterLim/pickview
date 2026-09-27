@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useStore } from "../core/Store";
-import { request } from "../core/api";
+import { savePlaybackProgress } from "../core/progress";
 import type { IProduct } from "../core/types";
 import { Button } from "./Controls";
 import { colors, styles } from "./theme";
@@ -41,12 +41,7 @@ export function Playback({
             }
             const position = Math.max(0, Math.min(seconds, product.durationSeconds));
             rememberProgress(product.id, position);
-            request("/activity", token, "PUT", {
-                targetId: product.id,
-                kind: "PROGRESS",
-                content: "",
-                numberValue: position,
-            })
+            savePlaybackProgress(token, product.id, position)
                 .then(() => {
                     if (alive) {
                         setSaveFailed(false);

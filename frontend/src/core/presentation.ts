@@ -1,7 +1,7 @@
 import catalog from "../../../content/demo-catalog.json";
 import type { IProduct, Language } from "./types";
 
-export function getDemoContentOrNull(product: IProduct) {
+export function getDemoContentOrNull(product: IProduct): (typeof catalog)[number] | null {
     return product.isDemo ? (catalog.find((item) => item.id === product.id) ?? null) : null;
 }
 
