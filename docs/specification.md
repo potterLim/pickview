@@ -1,28 +1,258 @@
-# PickView demo specification v1.0
+# PickView 제품 명세
 
-## Scope
-Video marketplace: Korean launch, Korean/English UI, KRW, individual and same-creator bundles; no subscription. Responsive web and native Expo iOS/Android clients share a Spring Boot server. Local development precedes external hosting. IntelliJ Ultimate is the reference IDE. All payments/refunds/settlements are simulated and never collect card or banking credentials.
+기준일: 2026년 9월 28일 · 현재 데모 구현 기준
 
-## Buyer
-Anonymous discovery, search/title/description/seller, category/rating filters and popularity/newest/rating sorting. Interest-based home, seller pages, wishlist/follow, private inquiries, verified purchaser reviews, cart, mock checkout, library, server-synced resume, notifications and settings. Purchase requires adult-confirmed account. Email/password authentication is real; social authentication is explicitly simulated.
+이 문서는 PickView의 사용자 경험과 거래 규칙, 구현 범위를 설명합니다. 초기 아이디어를 그대로 나열하지 않고 현재 코드와 화면에 반영된 동작을 기준으로 정리했습니다. 향후 운영 정책과 검증 과제는 마지막 절에 구분했습니다. 설치·실행 명령과 데모 계정은 [README](../README.md)를 참고하세요.
 
-## Catalog and access
-Creators own rights, may sell elsewhere, apply for approval. Free or KRW >=1000 in increments of 100. Unlimited or 7/30/90 days starting at purchase; same prices across clients. Bundles share seller and period; block duplicate content owned or within cart. Sold bundle contents cannot be removed. Changes do not revoke historical access. Withdrawal preserves valid purchases; legal removal may disable playback with refund review. Expired purchases can be bought again. Existing buyers receive video updates.
+## 1. 제품의 목적과 범위
 
-## Media
-Demo uploads: MP4 H.264/AAC, <=1080p, <=100MB, <=10min; validated server-side. Preview <=20% and <=60sec with distinct physical preview file, never expose full video through public preview. Server authorization for full playback, protected object storage. Seek, +/-10sec, .5–2x, fullscreen, cross-device resume. Concurrent devices allowed. No offline downloads/DRM. Large-file transcoding/adaptive streaming excluded.
+**구독 없이, 보고 싶은 영상만.**
 
-## Seller
-Personal/business application, channel profile, upload/title/description/thumbnail/category/price/period/preview/rights confirmation, optional tags, same-seller bundles. Draft/pending/approved/rejected/withdrawn. Review new videos and replacements. Metadata edits audited. Web/native authoring. Sales, fees, projected settlements and per-product figures. One owner per channel; no coupons/scheduling/teams/attachments.
+PickView는 창작자가 권리를 가진 영상을 직접 등록하고, 시청자가 원하는 영상의 시청 권한을 단품 또는 패키지로 구매하는 크리에이터 마켓플레이스입니다. 보고 싶은 몇 편 때문에 채널 전체의 구독을 유지해야 하는 부담에서 출발했습니다.
 
-## Orders and operations
-Multi-seller cart, server-calculated totals, idempotent checkout, success/failure/cancel simulations. Platform 15% after configurable mock channel fee, seller 85%; show simulated rates. Monthly settlements on next-month 15th; >=KRW10000, smaller balances carry. Refund requests (unplayed cancellation, played reason review); approval atomically revokes grants and adjusts settlement; bundle refunds are whole bundle.
+현재 결과물은 판매자 등록부터 검수, 모의 구매, 시청, 환불과 정산까지 연결한 로컬 데모입니다. 제품에 필요한 규칙과 경험을 구체화하는 것이 목적이며, 실제 금전 거래나 사업성 검증까지 완료한 서비스는 아닙니다.
 
-## Moderation
-Separate ADMIN/CONTENT/SUPPORT/FINANCE permissions enforced server-side; auditable decisions and role changes. Reports and blocking. Prohibited pornography, hate, copyright infringement, illicit recordings, fraud and privacy abuse. In-app notifications, seller replies and support tickets; no actual email/push/chat.
+| 항목 | 현재 범위 |
+| --- | --- |
+| 초기 대상 | 한국 사용자와 창작자 |
+| 언어·통화 | 한국어·영어 UI, 원화(KRW) |
+| 콘텐츠 | 교육·강의, 투자·경제, 코미디 분야의 짧은 영상 |
+| 판매 방식 | 영상 단품과 같은 판매자의 영상 패키지. 정기 구독 없음 |
+| 클라이언트 | Expo / React Native 기반 반응형 웹과 iOS·Android 공용 화면 코드 |
+| 거래 | 모의 결제·환불·정산. 실제 카드·은행 정보를 수집하지 않음 |
+| 실행 | 공통 Spring Boot API, 기본 로컬 환경은 H2와 비공개 파일 저장소 |
 
-## Acceptance
-Seller upload -> approval -> cross-account discovery; mobile purchase -> desktop library; protected full playback; resume sync; withdrawal retention; expiry denial; refund/grant/ledger consistency; role and ownership isolation; idempotence/failure/cancel; responsive Korean/English. Source, migrations, seeds, setup, test reports, runnable web and test-build configuration. Native binaries require available signing/build infrastructure; report unverified platforms explicitly.
+## 2. 사용자와 운영 역할
 
-## Design
-White #FFFFFF, ink #20202A, violet #7256E8, muted #747482, lavender #F4F1FE. Airy discovery with desktop sidebar, mobile bottom navigation, prominent thumbnails, price and term. Hero copy: 구독 없이, 보고 싶은 영상만. Screen inventory: discovery, details/player/reviews, seller profile, auth, cart/checkout, library, favorites/follows, orders/refunds, inbox/settings, seller application/editor/analytics, admin review/support/settlements. Design delegation was authorized; no further visual approval gate.
+비로그인 방문자는 공개 상품을 탐색하고 상세 정보와 미리보기를 확인할 수 있습니다. 구매와 개인 활동은 로그인한 계정에 연결됩니다.
+
+| 사용자·역할 | 주요 기능 |
+| --- | --- |
+| 구매자 | 장바구니, 모의 구매, 라이브러리, 본편 재생, 후기, 찜·팔로우, 문의와 환불 요청 |
+| 승인된 판매자 | 채널 관리, 상품 등록·수정, 업로드, 검수 요청, 판매 중단, 판매 내역·정산 정보 확인 |
+| 전체 관리자 | 운영 업무 전반 및 운영 역할 변경 |
+| 콘텐츠 담당 | 판매자 심사, 콘텐츠 검수 및 관련 운영 처리 |
+| 고객지원 담당 | 고객지원·환불 요청 처리 |
+| 정산 담당 | 판매자 정산 정보 확인과 모의 정산 실행 |
+
+역할별 화면 구성뿐 아니라 서버에서도 요청자의 역할과 대상의 소유자를 검사합니다. 판매자는 자신의 상품을 관리하며, 고객지원 역할만으로 미공개 본편의 검수 권한을 얻지는 않습니다.
+
+### 계정과 인증
+
+- 이메일·비밀번호 회원가입과 로그인은 실제로 동작합니다.
+- 회원가입 시 성인 여부를 확인받습니다. 외부 본인인증이나 나이 검증 서비스는 연결하지 않았습니다.
+- 카카오·Google·Apple 로그인은 모의 기능입니다. Apple 선택지는 iOS에서만 표시합니다. 실제 제공자의 OAuth 인증을 수행하지 않습니다.
+- 구매 기록, 시청 권한, 이어보기와 개인 활동은 서버의 계정에 연결합니다.
+- 설정에서 언어와 관심 분야를 변경하고 저장할 수 있습니다. 저장 성공 안내와 변경 여부를 표시합니다.
+
+## 3. 상품과 구매 조건
+
+### 가격과 이용 기간
+
+| 항목 | 규칙 |
+| --- | --- |
+| 무료 상품 | 0원 |
+| 유료 상품 | 1,000원부터 1,000,000원까지, 100원 단위 |
+| 이용 기간 | 7일, 30일, 90일, 기간 제한 없음 |
+| 기간 시작 | 최초 재생이 아닌 구매 시점 |
+| 이용 방식 | 플랫폼 안에서 재생. 오프라인 다운로드 없음 |
+
+‘기간 제한 없음’은 별도 만료일을 두지 않는다는 뜻입니다. 파일의 영구 소유나 서비스의 영구 존속을 의미하지 않습니다. 가격과 이용 기간은 상품 카드와 상세 화면에서 구매 전에 확인할 수 있습니다.
+
+### 패키지
+
+- 같은 판매자의 승인된 단품 영상 두 개 이상으로 구성합니다.
+- 패키지 가격은 구성 영상의 개별 가격 합계를 넘을 수 없습니다.
+- 구매하면 패키지에 지정한 이용 기간으로 구성 영상별 시청 권한을 부여합니다. 구성 영상의 단품 이용 기간과 같아야 하는 것은 아닙니다.
+- 상품 유형과 패키지 구성은 생성 이후 변경할 수 없습니다. 판매가 발생한 뒤에만 제한하는 규칙이 아닙니다.
+- 다른 판매자와 공동으로 구성하는 패키지와 이미 보유한 영상의 가격을 빼는 부분 할인은 지원하지 않습니다.
+
+### 중복 구매와 상품 변경
+
+유효한 시청 권한이 있는 영상은 다시 구매할 수 없습니다. 장바구니 안의 단품·패키지 간 중복도 검사합니다. 이용 기간이 만료되면 현재 판매 가능한 상품을 다시 구매할 수 있습니다. 판매자가 자신의 상품을 구매하는 것은 허용하지 않습니다.
+
+주문에는 구매 당시의 상품명·금액·기간과 수수료를 기록합니다. 이후 상품 정보를 수정해도 과거 주문의 조건은 바뀌지 않습니다. 본편 파일 교체는 재검수 대상으로 전환되며, 기존 구매자의 권한은 파일 버전별 소유권이 아니라 해당 상품의 시청 권한입니다.
+
+## 4. 구매 전 탐색
+
+탐색 화면에서는 관심 분야와 인기 영상을 보여주고, 제목·설명·판매자 등의 검색과 카테고리·평점 조건, 인기순·최신순·평점순 정렬을 제공합니다.
+
+상품 카드에는 썸네일, 제목, 판매자, 가격과 이용 기간을 배치합니다. 영상 길이나 패키지 구성 수를 표시하고, 이미 이용할 수 있는 콘텐츠는 라이브러리 표시로 구분합니다.
+
+상세 화면에서는 설명, 미리보기, 구매 조건, 판매자 정보와 후기를 확인합니다. 검색 결과가 없을 때는 조건을 초기화해 다시 탐색할 수 있습니다. 찜과 팔로우는 관심 콘텐츠와 창작자를 다시 찾는 경로로 사용합니다.
+
+## 5. 장바구니와 모의 결제
+
+여러 판매자의 상품을 같은 장바구니에 담아 결제할 수 있습니다. 한 번의 결제 요청은 최대 30개 상품을 대상으로 하며, 서버가 구매 가능 여부와 중복을 검사하고 금액을 계산합니다.
+
+카드·간편결제 선택과 성공·실패·취소 결과는 시연용입니다. 실제 외부 결제 요청을 보내지 않습니다. 같은 구매자의 동일한 요청 키로 다시 요청하면 기존 주문 결과를 반환해 중복 처리를 방지합니다.
+
+| 결과 | 내부 처리와 화면 |
+| --- | --- |
+| 성공 | 주문 항목과 영상별 시청 권한 생성. 라이브러리에서 본편 이용 가능 |
+| 실패 | 실패한 주문 기록을 남기고 시청 권한은 생성하지 않음 |
+| 취소 | 취소한 주문 기록을 남기고 시청 권한은 생성하지 않음 |
+
+실패·취소 주문에는 현재 구현상 구매 성공 시의 상품 항목이 생성되지 않습니다. 주문 내역은 ‘결제된 금액 0원’과 실패·취소 사유를 표시하며, 시도한 상품 금액을 결제된 금액처럼 안내하지 않습니다.
+
+## 6. 구매 이후와 시청 권한
+
+### 라이브러리와 재생
+
+구매한 영상은 라이브러리에서 이용 기한, 시청 진행 상태와 함께 확인합니다. 재생 위치 이동, 앞뒤 10초 이동, 0.5~2배속 조절, 전체 화면과 이어보기를 제공합니다.
+
+이어보기 위치는 서버에 저장합니다. 같은 클라이언트에서 발생한 저장 요청은 순서대로 처리하도록 구성했습니다. 여러 기기의 동시 이용을 막지는 않지만, 여러 기기가 동시에 기록하는 위치의 우선순위 정책은 별도 과제입니다.
+
+### 상태에 따른 접근
+
+| 상황 | 신규 구매 | 기존 구매자의 본편 접근 |
+| --- | --- | --- |
+| 승인되어 판매 중 | 구매 조건 충족 시 가능 | 유효한 권한으로 가능 |
+| 판매자가 판매 중단 | 불가 | 유효한 권한 유지 |
+| 이용 기간 만료 | 판매 가능한 상품이면 재구매 가능 | 만료된 권한으로는 불가 |
+| 환불 승인 | 중복 여부 등 현재 조건에 따라 판단 | 해당 환불 항목의 권한 회수 |
+| 운영자가 제공 중단 | 불가 | 기존 권한이 있어도 제한 |
+
+본편은 재생 링크를 발급할 때와 파일을 요청할 때 서버가 접근을 검사합니다. 환불·제공 중단 이후에는 이전 링크를 이용한 새로운 파일 요청도 제한합니다. 이미 기기에 전달되어 버퍼에 남은 데이터를 원격으로 삭제하는 기능은 아닙니다.
+
+## 7. 판매자 신청과 상품 관리
+
+개인과 기업 모두 판매자로 신청할 수 있습니다. 채널 이름·소개·유형을 입력하고 운영자의 승인을 받은 뒤 스튜디오를 이용합니다. 채널은 한 명의 소유자를 기준으로 하며 팀별 편집 권한은 제공하지 않습니다.
+
+상품 등록 항목은 제목, 설명, 썸네일, 카테고리, 가격, 이용 기간, 영상 파일, 미리보기 길이와 판매 권리 확인입니다. 태그는 선택 사항입니다. 판매자는 콘텐츠의 권리를 보유해야 하며 다른 플랫폼에서 병행 판매할 수 있다는 정책을 전제로 합니다. 권리 확인 입력은 법적 소유권을 자동 검증하는 기능이 아닙니다.
+
+### 상품 상태
+
+| 상태 | 화면 표시·의미 |
+| --- | --- |
+| 초안 | 작성 중. 아직 공개되지 않은 상품 |
+| 검수 대기 | 검토 중. 업로드 또는 검수 요청 후 승인을 기다림 |
+| 승인 | 승인 완료. 공개·구매 대상으로 이용 가능하되 별도 제공 중단 여부도 검사 |
+| 반려 | 보완 필요. 검수 결과에 따라 내용을 수정하고 다시 제출 |
+| 판매 중단 | 판매자가 신규 판매를 중단한 상태 |
+
+영상 업로드와 본편 교체는 검수 대기로 전환합니다. 상품 설명·가격 등의 수정은 감사 기록으로 남기며, 모든 메타데이터 수정이 자동으로 재검수를 거치는 것은 아닙니다.
+
+상품 정보 저장 뒤 파일 업로드가 실패하면 이미 생성한 상품의 식별자를 유지해 재시도합니다. 재시도할 때마다 새 상품을 만드는 흐름을 피합니다.
+
+스튜디오에서는 판매 실적과 판매 내역, 수수료·정산 관련 금액을 확인합니다. 쿠폰, 예약 공개, 팀 채널, 별도 강의 첨부파일은 현재 범위에 포함하지 않습니다.
+
+## 8. 미디어 처리
+
+| 항목 | 허용 범위 |
+| --- | --- |
+| 영상 파일 | MP4, H.264 영상. 오디오 트랙이 있다면 AAC |
+| 해상도 | 짧은 변 1,080px 이하, 긴 변 1,920px 이하. 가로·세로 영상 지원 |
+| 파일 크기 | 최대 100MB |
+| 길이 | 0초 초과, 최대 10분 |
+| 미리보기 | 0초 초과, 전체 길이의 20% 이하이면서 최대 60초 |
+| 썸네일 | JPG·PNG, 최대 5MB, 각 변 최대 4,096px |
+
+서버가 파일과 메타데이터를 검사하고 본편과 별도의 미리보기 파일을 만듭니다. 공개 미리보기용으로 본편 주소를 제공한 뒤 플레이어 시간만 제한하는 방식은 사용하지 않습니다.
+
+기본 로컬 실행에서는 비공개 파일 저장소를 사용합니다. MinIO의 비공개 버킷을 사용하는 설정도 제공합니다. 대용량 원본 처리, 여러 화질 변환과 적응형 스트리밍, DRM은 포함하지 않습니다.
+
+기본 샘플은 사진·모션 그래픽·생성한 배경음으로 구성한 48초 영상 6편과 각각의 9초 미리보기입니다. 실제 촬영 강의가 아닌 제품 흐름 시연용 콘텐츠입니다.
+
+## 9. 환불과 주문 이력
+
+주문 내역은 기본적으로 거래 이력을 보여줍니다. 사용자가 특정 항목의 ‘환불 요청’을 선택하면 사유 입력과 제출 동작이 열립니다.
+
+1. 구매자가 사유를 작성해 환불 요청을 제출합니다.
+2. 주문 항목에 ‘환불 요청 검토 중’을 표시합니다. 같은 항목의 열린 요청을 중복 제출할 수 없습니다.
+3. 고객지원 담당자 또는 전체 관리자가 검토하고 승인하거나 반려합니다.
+4. 승인하면 해당 주문 항목을 환불 처리하고 연결된 시청 권한을 회수합니다. 반려만으로는 권한을 회수하지 않습니다.
+
+미시청 여부만으로 자동 환불하지 않습니다. 시청 여부와 관계없이 현재 데모의 환불은 사유 입력과 운영자 검토를 거칩니다. 요청 제출 자체가 즉시 환불을 의미하지 않습니다.
+
+여러 상품을 함께 주문한 경우 주문 항목 단위로 환불합니다. 패키지는 하나의 항목이므로 패키지 전체를 환불하며 구성 영상 하나만 환불하는 기능은 없습니다. 일부 항목만 환불하면 화면에 ‘일부 환불’, 모든 항목을 환불하면 ‘환불 완료’를 표시합니다.
+
+환불된 주문에도 ‘주문 당시 결제 금액’을 유지하고, 별도로 ‘환불 완료 금액’을 표시합니다. 환불된 거래를 처음부터 결제되지 않은 거래로 표현하지 않습니다. 같은 항목을 다시 환불 처리하는 요청은 거절합니다.
+
+## 10. 수수료와 모의 정산
+
+### 계산 기준
+
+현재 데모는 모의 결제 채널 수수료 3%를 먼저 공제하고, 남은 금액에서 플랫폼 수수료 15%를 계산합니다. 각 수수료는 원 단위 미만을 버리며 판매자 몫은 두 수수료를 제외한 금액입니다. 실제 결제사의 요율이나 확정된 사업 수수료를 뜻하지 않습니다.
+
+| 20,000원 상품의 예 | 금액 |
+| --- | --- |
+| 모의 채널 수수료: 20,000 × 3% | 600원 |
+| 플랫폼 수수료: 19,400 × 15% | 2,910원 |
+| 판매자 몫 | 16,490원 |
+
+### 정산 조건과 환불 조정
+
+- 한국 시간 기준 매월 15일부터, 전월까지 발생한 거래 중 정산되지 않고 환불되지 않은 항목을 대상으로 합니다.
+- 환불 조정액을 반영한 판매자 지급 대상 금액이 10,000원 이상이면 정산 담당자가 모의 정산을 실행할 수 있습니다. 자동 은행 송금이나 예약 실행은 아닙니다.
+- 기준에 못 미치면 정산을 실행하지 않고 미처리 거래와 조정 내역을 다음 계산에 남깁니다.
+- 정산 전 환불은 지급 대상에서 제외합니다. 정산 후 환불은 과거 지급 기록을 삭제하지 않고 별도 조정 내역으로 다음 정산에서 차감합니다.
+- 환불과 정산은 같은 판매자의 처리가 충돌하지 않도록 잠금을 사용하고, 관련 데이터 변경을 트랜잭션으로 처리합니다.
+
+화면의 판매액과 정산 예정액은 서로 다른 금액입니다. 실제 지급일·송금 계좌·세금 처리·정산 증빙은 데모 범위 밖입니다.
+
+## 11. 문의·후기·알림과 운영 정책
+
+판매자 문의, 고객지원 요청, 콘텐츠 신고와 환불 요청을 구분합니다. 판매자는 본인에게 전달된 문의에 답하고 운영자는 담당 업무에 맞게 요청을 처리합니다. 앱 안의 알림과 읽음 처리는 제공하지만 실제 이메일·기기 푸시·실시간 채팅은 연결하지 않았습니다.
+
+후기는 해당 상품의 환불되지 않은 구매 항목이 있는 계정이 작성할 수 있으며 평점은 1~5점입니다. 계정 차단은 일반 문의와 구분해 처리하고, 안전 관련 신고 경로까지 함께 막지 않습니다.
+
+운영 정책상 음란물, 혐오 콘텐츠, 저작권 침해, 불법 촬영물, 사기와 개인정보 침해 콘텐츠를 허용하지 않는 것을 전제로 합니다. 데모는 신고·검수·제공 중단 도구와 감사 기록을 제공하며, 금지 콘텐츠를 자동으로 판별하거나 법적 분쟁 처리를 자동화하지 않습니다.
+
+## 12. 화면과 디자인 기준
+
+친근한 크리에이터 플랫폼을 지향하며 밝은 배경, 보라색 강조색과 여백을 사용합니다. 데스크톱은 사이드바, 모바일 웹은 하단 주요 메뉴를 중심으로 탐색 경로를 제공합니다.
+
+| 디자인 요소 | 현재 공통 값 |
+| --- | --- |
+| 기본 배경 | `#FFFFFF` |
+| 본문 | `#20202A` |
+| 보조 글자 | `#696978` |
+| 강조색 | `#6B4EDB` |
+| 옅은 배경 | `#F4F1FE` |
+
+주요 화면은 탐색, 상세·플레이어·후기, 판매자 채널, 인증, 장바구니·결제, 라이브러리, 찜·팔로우, 주문·환불, 문의·알림, 설정, 판매자 신청·스튜디오·편집, 운영 관리입니다.
+
+가격과 이용 조건은 함께 읽히게 배치하고, 버튼은 역할에 맞는 크기와 강조 수준을 사용합니다. 로딩·빈 결과·오류·저장 성공과 처리 중 상태를 구분합니다. 주문 화면은 환불 입력창을 기본으로 열지 않으며 사용자의 명시적 동작 이후에 보여줍니다.
+
+## 13. 기술 구성과 품질 기준
+
+클라이언트는 TypeScript / Expo / React Native, 공통 서버는 Java / Spring Boot입니다. 계정·주문·시청 권한의 판단은 서버가 맡습니다. 기본 실행은 H2 파일 DB와 로컬 미디어 저장소이며, PostgreSQL·MinIO 구성은 별도로 제공합니다. IntelliJ Ultimate에서 서버와 클라이언트를 함께 관리할 수 있습니다.
+
+- 금액·상품 가격·이용 기간·식별자와 상태는 의미와 제약에 맞는 타입으로 구분합니다. 외부 입력과 API 응답은 실제 값을 검증합니다.
+- 함수는 하나의 논리적 책임을 맡습니다. 하나의 구매 처리처럼 원자성이 필요한 절차는 해당 사용 사례 안에서 조율합니다.
+- 파일은 책임·의존성·재사용·변경 이유가 나뉘는 지점에서 분리합니다. 길이만 줄이기 위한 분리는 하지 않습니다.
+- 이전 계정이나 화면의 늦은 응답이 현재 상태에 섞이지 않도록 처리하고, 비동기 실패와 업로드 재시도를 다룹니다.
+- 코드 규칙·타입·서식 검사와 회귀·통합 테스트를 실행합니다. GitHub Actions는 코드 검사와 웹 빌드를 수행하며 자동 배포하지 않습니다.
+
+## 14. 검증 기준과 남은 과제
+
+### 핵심 확인 항목
+
+| 흐름 | 확인할 결과 |
+| --- | --- |
+| 상품 등록 → 검수 → 공개 | 승인 전후의 노출이 구분되고 다른 계정에서도 승인된 상품을 발견할 수 있음 |
+| 결제 성공·실패·취소 | 성공한 거래만 시청 권한을 만들고 동일 요청을 중복 처리하지 않음 |
+| 구매 → 라이브러리 → 재생 | 구매 조건과 이용 기한을 표시하고 권한이 있는 본편만 제공 |
+| 이어보기 | 서버에 저장한 위치를 다시 읽고 같은 클라이언트의 오래된 요청이 최신 위치를 덮지 않음 |
+| 판매 중단·만료·제공 중단 | 각각의 정책에 맞게 신규 구매와 기존 시청을 구분 |
+| 환불 요청 → 승인 | 주문 항목, 시청 권한과 정산 조정이 일관되게 변경 |
+| 부분·전체 환불 | 원래 결제 금액을 보존하고 실제 환불 금액과 상태를 구분 |
+| 역할·소유자 검사 | 다른 계정의 상품·주문이나 담당 범위를 벗어난 운영 요청을 제한 |
+| 반응형 화면·설정 | 한국어·영어, 화면 너비별 배치, 저장 결과와 재접속 시 설정 유지 |
+
+### 확인된 환경과 한계
+
+브라우저 중심의 로컬 H2·비공개 파일 저장소 환경에서 핵심 흐름을 확인했습니다. 데스크톱·태블릿·모바일 너비를 점검했고 Android 에뮬레이터의 Expo Go에서도 실행·시연했습니다. 이는 모든 화면과 기기 조합을 검증했다는 의미는 아닙니다.
+
+다음 항목은 별도 검증 또는 후속 구현이 필요합니다.
+
+- PostgreSQL·MinIO의 실제 연동 실행과 운영 환경 설정.
+- iOS 시뮬레이터·실제 기기, Android 실제 기기, 서명된 릴리스 빌드와 스토어 제출.
+- 실제 결제·소셜 인증·환불·송금·이메일·푸시 연동.
+- 메모리에 보관하는 재생 티켓의 서버 간 공유, 조회 최적화와 부하 검증.
+- 전체 접근성 검증과 다양한 브라우저·기기에서의 미디어 재생 호환성.
+- 콘텐츠 권리 증빙, 검수 기준, 분쟁 처리, 서비스 종료 시 구매자 안내 등 실제 운영 절차.
+- 구매자의 지불 의향, 창작자의 참여 의향, 콘텐츠 가격과 영상 제공·운영 비용 검증.
+
+이 명세는 현재 데모에서 제공하는 경험과 정책의 기준입니다. 실제 서비스를 준비할 때는 위 과제의 검증 결과에 따라 조건과 범위를 갱신합니다.
