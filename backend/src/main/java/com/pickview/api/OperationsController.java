@@ -1,5 +1,9 @@
 package com.pickview.api;
 
+import com.pickview.domain.EApprovalDecision;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import com.pickview.operations.OperationsService;
 import com.pickview.security.AccountService;
 import java.security.Principal;
@@ -32,27 +36,27 @@ public class OperationsController {
     }
 
     @PostMapping("/api/admin/sellers/{id}")
-    public void reviewSeller(Principal principal, @PathVariable String id, @RequestBody DecisionRequest request) {
-        mOperations.reviewSeller(mAccounts.requireAccount(principal.getName()), id, request.approve());
+    public void reviewSeller(Principal principal, @PathVariable String id, @Valid @RequestBody ApprovalRequest request) {
+        mOperations.reviewSeller(mAccounts.requireAccount(principal.getName()), id, request.toDecision());
     }
 
     @PostMapping("/api/admin/products/{id}")
-    public void reviewProduct(Principal principal, @PathVariable String id, @RequestBody DecisionRequest request) {
+    public void reviewProduct(Principal principal, @PathVariable String id, @Valid @RequestBody DecisionRequest request) {
         mOperations.reviewProduct(mAccounts.requireAccount(principal.getName()), id, request.decision());
     }
 
     @PostMapping("/api/admin/tickets/{id}")
-    public void resolveTicket(Principal principal, @PathVariable String id, @RequestBody DecisionRequest request) {
+    public void resolveTicket(Principal principal, @PathVariable String id, @Valid @RequestBody ResolutionRequest request) {
         mOperations.resolveTicket(
             mAccounts.requireAccount(principal.getName()),
             id,
             request.reply(),
-            request.approve()
+            request.toDecision()
         );
     }
 
     @PostMapping("/api/admin/roles/{id}")
-    public void changeRole(Principal principal, @PathVariable String id, @RequestBody DecisionRequest request) {
+    public void changeRole(Principal principal, @PathVariable String id, @Valid @RequestBody DecisionRequest request) {
         mOperations.changeRole(mAccounts.requireAccount(principal.getName()), id, request.decision());
     }
 
@@ -61,10 +65,21 @@ public class OperationsController {
         return Map.of("amountWon", mOperations.settle(mAccounts.requireAccount(principal.getName()), id));
     }
 
-    public record DecisionRequest(String decision, String reply, boolean approve) {
-        public DecisionRequest {
-            decision = decision == null ? "" : decision;
-            reply = reply == null ? "" : reply;
+    public record DecisionRequest(@NotBlank String decision) {
+    }
+
+    public record ApprovalRequest(@NotNull Boolean approve) {
+        public EApprovalDecision toDecision() {
+            if (approve == null) {
+                throw new ApiFailure(400, "Explicit approval decision required");
+            }
+            return approve ? EApprovalDecision.APPROVE : EApprovalDecision.REJECT;
+        }
+    }
+
+    public record ResolutionRequest(@NotNull Boolean approve, @NotBlank String reply) {
+        public EApprovalDecision toDecision() {
+            return new ApprovalRequest(approve).toDecision();
         }
     }
 }

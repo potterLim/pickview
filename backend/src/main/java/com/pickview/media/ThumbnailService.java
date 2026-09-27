@@ -5,6 +5,7 @@ import com.pickview.catalog.CatalogService;
 import com.pickview.model.Account;
 import com.pickview.model.Product;
 import java.awt.image.BufferedImage;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
@@ -63,7 +64,10 @@ public class ThumbnailService {
     }
 
     private BufferedImage decodeImage(MultipartFile file) throws Exception {
-        try (ImageInputStream input = ImageIO.createImageInputStream(file.getInputStream())) {
+        try (
+            InputStream source = file.getInputStream();
+            ImageInputStream input = ImageIO.createImageInputStream(source)
+        ) {
             Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
             if (!readers.hasNext()) {
                 throw new ApiFailure(400, "Invalid image");

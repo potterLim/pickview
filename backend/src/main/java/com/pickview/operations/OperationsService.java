@@ -1,6 +1,7 @@
 package com.pickview.operations;
 
 import com.pickview.api.ApiFailure;
+import com.pickview.domain.EApprovalDecision;
 import com.pickview.api.AuthController.UserView;
 import com.pickview.catalog.CatalogService;
 import com.pickview.commerce.CommerceService;
@@ -131,15 +132,15 @@ public class OperationsService {
     }
 
     @Transactional
-    public void reviewSeller(Account operator, String id, boolean approve) {
+    public void reviewSeller(Account operator, String id, EApprovalDecision decision) {
         requireRole(operator, "CONTENT");
         Account seller = mAccounts.findById(id).orElseThrow(() -> new ApiFailure(404, "Seller not found"));
-        if (approve) {
+        if (decision == EApprovalDecision.APPROVE) {
             seller.approveSeller();
         } else {
             seller.rejectSeller();
         }
-        audit(operator, "SELLER_REVIEW", id, approve ? "APPROVED" : "REJECTED");
+        audit(operator, "SELLER_REVIEW", id, decision == EApprovalDecision.APPROVE ? "APPROVED" : "REJECTED");
         mCommunity.notifyUser(id, "판매자 심사 완료 / Seller application reviewed");
     }
 
@@ -168,7 +169,7 @@ public class OperationsService {
     }
 
     @Transactional
-    public void resolveTicket(Account operator, String id, String reply, boolean approve) {
+    public void resolveTicket(Account operator, String id, String reply, EApprovalDecision decision) {
         Ticket ticket = mEntityManager.find(Ticket.class, id, LockModeType.PESSIMISTIC_WRITE);
         if (ticket == null) {
             throw new ApiFailure(404, "Ticket not found");
@@ -182,10 +183,10 @@ public class OperationsService {
         ) {
             throw new ApiFailure(409, "처리할 수 없는 문의입니다. / Ticket cannot be resolved.");
         }
-        if (ticket.getKind().equals("REFUND") && approve) {
+        if (ticket.getKind().equals("REFUND") && decision == EApprovalDecision.APPROVE) {
             refundLine(ticket.getTargetId());
         }
-        ticket.resolve(reply, approve ? "APPROVED" : "REJECTED");
+        ticket.resolve(reply, decision == EApprovalDecision.APPROVE ? "APPROVED" : "REJECTED");
         audit(operator, "TICKET_RESOLVED", id, reply);
         mCommunity.notifyUser(ticket.getUserId(), "문의 처리 완료 / Your request was resolved");
     }
@@ -337,7 +338,16 @@ public class OperationsService {
         List<CommerceService.LineView> lines,
         List<RefundAdjustmentView> adjustments,
         List<AuditView> audits
-    ) {}
+    ) {
+        public DashboardView {
+            accounts = List.copyOf(accounts);
+            products = List.copyOf(products);
+            tickets = List.copyOf(tickets);
+            lines = List.copyOf(lines);
+            adjustments = List.copyOf(adjustments);
+            audits = List.copyOf(audits);
+        }
+    }
 
     public record RefundAdjustmentView(String lineId, String sellerId, int amountWon, String settlementId) {}
 
@@ -350,5 +360,9 @@ public class OperationsService {
         int adjustmentWon,
         int paidWon,
         List<SettlementView> settlements
-    ) {}
+    ) {
+        public SellerSettlementView {
+            settlements = List.copyOf(settlements);
+        }
+    }
 }

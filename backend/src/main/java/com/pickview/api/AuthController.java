@@ -1,6 +1,7 @@
 package com.pickview.api;
 
 import com.pickview.model.Account;
+import com.pickview.domain.Password;
 import com.pickview.security.AccountService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -30,13 +31,13 @@ public class AuthController {
 
     @PostMapping("/api/auth/login")
     public Map<String, String> login(@Valid @RequestBody LoginRequest request) {
-        return Map.of("token", mAccounts.login(request.email(), request.password()));
+        return Map.of("token", mAccounts.login(request.email(), new Password(request.password())));
     }
 
     @PostMapping("/api/auth/register")
     public Map<String, String> register(@Valid @RequestBody RegisterRequest request) {
-        mAccounts.register(request.email(), request.password(), request.name(), request.isAdult());
-        return Map.of("token", mAccounts.login(request.email(), request.password()));
+        mAccounts.register(request.email(), new Password(request.password()), request.name(), request.isAdult());
+        return Map.of("token", mAccounts.login(request.email(), new Password(request.password())));
     }
 
     @PostMapping("/api/auth/logout")

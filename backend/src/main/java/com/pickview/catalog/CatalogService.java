@@ -256,6 +256,10 @@ public class CatalogService {
         String tags
     ) {
         public ProductRequest {
+            if (videoIds == null || videoIds.stream().anyMatch(id -> id == null || id.isBlank())) {
+                throw new ApiFailure(400, "Invalid bundle selection");
+            }
+            videoIds = List.copyOf(videoIds);
             tags = tags == null ? "" : tags.strip();
         }
     }
@@ -281,5 +285,9 @@ public class CatalogService {
         boolean blocked,
         String tags,
         boolean isDemo
-    ) {}
+    ) {
+        public ProductView {
+            videoIds = List.copyOf(videoIds);
+        }
+    }
 }

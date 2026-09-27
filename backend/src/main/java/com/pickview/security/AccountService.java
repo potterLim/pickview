@@ -1,6 +1,7 @@
 package com.pickview.security;
 
 import com.pickview.api.ApiFailure;
+import com.pickview.domain.Password;
 import com.pickview.model.Account;
 import com.pickview.model.LoginSession;
 import com.pickview.repository.IAccountRepository;
@@ -38,11 +39,11 @@ public class AccountService {
     }
 
     @Transactional
-    public String login(String email, String password) {
+    public String login(String email, Password password) {
         Account account = mAccounts
             .findByEmail(email.strip().toLowerCase(Locale.ROOT))
             .orElseThrow(() -> new ApiFailure(401, "이메일 또는 비밀번호를 확인해 주세요. / Invalid credentials."));
-        if (!mEncoder.matches(password, account.getPasswordHash())) {
+        if (!password.matches(mEncoder, account.getPasswordHash())) {
             throw new ApiFailure(401, "이메일 또는 비밀번호를 확인해 주세요. / Invalid credentials.");
         }
         String token = UUID.randomUUID().toString() + UUID.randomUUID();
@@ -58,8 +59,8 @@ public class AccountService {
     }
 
     @Transactional
-    public Account register(String email, String password, String name, boolean isAdult) {
-        if (!isAdult || password.length() < 10 || password.length() > 64) {
+    public Account register(String email, Password password, String name, boolean isAdult) {
+        if (!isAdult) {
             throw new ApiFailure(
                 400,
                 "성인 확인과 10~64자 비밀번호가 필요합니다. / Adult confirmation and 10–64 character password required."
@@ -69,7 +70,7 @@ public class AccountService {
             new Account(
                 UUID.randomUUID().toString(),
                 email.strip().toLowerCase(Locale.ROOT),
-                mEncoder.encode(password),
+                password.encode(mEncoder),
                 name,
                 "BUYER",
                 "NONE",

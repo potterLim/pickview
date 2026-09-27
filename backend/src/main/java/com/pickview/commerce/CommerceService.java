@@ -231,7 +231,15 @@ public class CommerceService {
         @NotNull String requestKey,
         @NotNull String channel,
         @NotNull String outcome
-    ) {}
+    ) {
+        public CheckoutRequest {
+            if (productIds == null || productIds.isEmpty() || productIds.size() > 30
+                || productIds.stream().anyMatch(id -> id == null || id.isBlank())) {
+                throw new ApiFailure(400, "Invalid product selection");
+            }
+            productIds = List.copyOf(productIds);
+        }
+    }
 
     public record LineView(
         String id,
@@ -253,7 +261,11 @@ public class CommerceService {
         long createdAt,
         List<LineView> lines,
         int totalWon
-    ) {}
+    ) {
+        public OrderView {
+            lines = List.copyOf(lines);
+        }
+    }
 
     public record LibraryView(String id, CatalogService.ProductView product, long expiresAt, boolean active) {}
 }

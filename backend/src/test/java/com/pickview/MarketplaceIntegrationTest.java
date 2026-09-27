@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pickview.api.ApiFailure;
+import com.pickview.domain.EApprovalDecision;
 import com.pickview.commerce.CommerceService;
 import com.pickview.community.CommunityService;
 import com.pickview.config.DemoContentUpgrade;
@@ -158,7 +159,7 @@ class MarketplaceIntegrationTest {
         saveHistoricalLine("refunded", 15000, "previous-settlement");
         mGrants.save(new Grant("grant", "buyer", "video", "refunded", 0, false));
         mTickets.save(new Ticket("refund-ticket", "buyer", "refunded", "", "REFUND", "Request", "OPEN", "", 1));
-        mOperations.resolveTicket(mAdmin, "refund-ticket", "Approved", true);
+        mOperations.resolveTicket(mAdmin, "refund-ticket", "Approved", EApprovalDecision.APPROVE);
         assertFalse(mCommerce.canWatch("buyer", "video"));
         assertEquals(15000, mAdjustments.findById("refunded").orElseThrow().getAmountWon());
         assertEquals(-15000, mOperations.getSellerSettlementSummary("seller").pendingWon());
@@ -167,14 +168,14 @@ class MarketplaceIntegrationTest {
         assertTrue(mAdjustments.findPending("seller", "").isEmpty());
         assertEquals(0, mOperations.getSellerSettlementSummary("seller").pendingWon());
         assertThrows(ApiFailure.class, () -> mOperations.settle(mAdmin, "seller"));
-        assertThrows(ApiFailure.class, () -> mOperations.resolveTicket(mAdmin, "refund-ticket", "Again", true));
+        assertThrows(ApiFailure.class, () -> mOperations.resolveTicket(mAdmin, "refund-ticket", "Again", EApprovalDecision.APPROVE));
     }
 
     @Test
     void refundDebtCarriesForwardWhenNetPayoutIsBelowThreshold() {
         saveHistoricalLine("refunded", 15000, "previous-settlement");
         mTickets.save(new Ticket("refund-ticket", "buyer", "refunded", "", "REFUND", "Request", "OPEN", "", 1));
-        mOperations.resolveTicket(mAdmin, "refund-ticket", "Approved", true);
+        mOperations.resolveTicket(mAdmin, "refund-ticket", "Approved", EApprovalDecision.APPROVE);
         saveHistoricalLine("small", 20000, "");
         assertThrows(ApiFailure.class, () -> mOperations.settle(mAdmin, "seller"));
         assertEquals(1, mAdjustments.findPending("seller", "").size());
