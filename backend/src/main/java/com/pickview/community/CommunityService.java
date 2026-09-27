@@ -3,6 +3,11 @@ package com.pickview.community;
 import com.pickview.api.ApiFailure;
 import com.pickview.catalog.CatalogService;
 import com.pickview.commerce.CommerceService;
+import com.pickview.domain.AccountId;
+import com.pickview.domain.EActivityKind;
+import com.pickview.domain.ETicketKind;
+import com.pickview.domain.NoticeId;
+import com.pickview.domain.ProductId;
 import com.pickview.model.Account;
 import com.pickview.model.Engagement;
 import com.pickview.model.Notice;
@@ -70,31 +75,31 @@ public class CommunityService {
     @Transactional
     public void saveActivity(Account account, ActivityRequest request) {
         if (
-            !List.of("WISHLIST", "FOLLOW", "BLOCK", "PROGRESS", "REVIEW", "CART", "NOTIFY").contains(request.kind()) ||
+            request.kind() == null ||
             request.content().length() > 2000 ||
             !Double.isFinite(request.numberValue())
         ) {
             throw new ApiFailure(400, "Invalid activity");
         }
-        if (List.of("FOLLOW", "BLOCK", "NOTIFY").contains(request.kind())) {
+        if (List.of(EActivityKind.FOLLOW, EActivityKind.BLOCK, EActivityKind.NOTIFY).contains(request.kind())) {
             if (mAccounts.findById(request.targetId()).isEmpty() || account.getId().equals(request.targetId())) {
                 throw new ApiFailure(400, "Invalid account target");
             }
         } else {
-            mCatalog.requireProduct(request.targetId());
+            mCatalog.requireProduct(new ProductId(request.targetId()));
         }
-        if (request.kind().equals("PROGRESS")) {
-            if (!mCommerce.canWatch(account.getId(), request.targetId())) {
+        if (request.kind().equals(EActivityKind.PROGRESS)) {
+            if (!mCommerce.canWatch(new AccountId(account.getId()), new ProductId(request.targetId()))) {
                 throw new ApiFailure(403, "구매 후 이용 가능합니다. / Purchase required.");
             }
             if (
                 request.numberValue() < 0 ||
-                request.numberValue() > mCatalog.requireProduct(request.targetId()).getDurationSeconds()
+                request.numberValue() > mCatalog.requireProduct(new ProductId(request.targetId())).getDurationSeconds()
             ) {
                 throw new ApiFailure(400, "Invalid playback position");
             }
         }
-        if (request.kind().equals("REVIEW")) {
+        if (request.kind().equals(EActivityKind.REVIEW)) {
             boolean hasPurchase = mLines
                 .findAll()
                 .stream()
@@ -114,7 +119,7 @@ public class CommunityService {
             .filter(
                 entry ->
                     entry.getUserId().equals(account.getId()) &&
-                    entry.getKind().equals(request.kind()) &&
+                    entry.getKind().equals(request.kind().name()) &&
                     entry.getTargetId().equals(request.targetId())
             )
             .findFirst()
@@ -123,7 +128,7 @@ public class CommunityService {
                     UUID.randomUUID().toString(),
                     account.getId(),
                     request.targetId(),
-                    request.kind(),
+                    request.kind().name(),
                     "",
                     0,
                     0
@@ -152,20 +157,20 @@ public class CommunityService {
     @Transactional
     public void createTicket(Account account, TicketRequest request) {
         if (
-            !List.of("INQUIRY", "SUPPORT", "REPORT", "REFUND").contains(request.kind()) ||
+            request.kind() == null ||
             request.message().isBlank() ||
             request.message().length() > 4000
         ) {
             throw new ApiFailure(400, "문의 내용을 확인하세요. / Check your message.");
         }
         String recipient = "";
-        if (request.kind().equals("INQUIRY") || request.kind().equals("REPORT")) {
-            recipient = mCatalog.requireProduct(request.targetId()).getSellerId();
+        if (request.kind().equals(ETicketKind.INQUIRY) || request.kind().equals(ETicketKind.REPORT)) {
+            recipient = mCatalog.requireProduct(new ProductId(request.targetId())).getSellerId();
         }
-        if (request.kind().equals("INQUIRY") && isBlocked(account.getId(), recipient)) {
+        if (request.kind().equals(ETicketKind.INQUIRY) && isBlocked(account.getId(), recipient)) {
             throw new ApiFailure(403, "차단한 계정과는 문의할 수 없습니다. / Inquiry blocked.");
         }
-        if (request.kind().equals("REFUND")) {
+        if (request.kind().equals(ETicketKind.REFUND)) {
             OrderLine line = mLines
                 .findById(request.targetId())
                 .orElseThrow(() -> new ApiFailure(404, "Order not found"));
@@ -192,7 +197,7 @@ public class CommunityService {
                 account.getId(),
                 request.targetId(),
                 recipient,
-                request.kind(),
+                request.kind().name(),
                 request.message(),
                 "OPEN",
                 "",
@@ -242,8 +247,8 @@ public class CommunityService {
     }
 
     @Transactional
-    public void readNotice(String userId, String id) {
-        Notice notice = mNotices.findById(id).orElseThrow(() -> new ApiFailure(404, "Notice not found"));
+    public void readNotice(String userId, NoticeId id) {
+        Notice notice = mNotices.findById(id.getValue()).orElseThrow(() -> new ApiFailure(404, "Notice not found"));
         if (!notice.getUserId().equals(userId)) {
             throw new ApiFailure(403, "Owner only");
         }
@@ -303,7 +308,7 @@ public class CommunityService {
 
     public record ActivityRequest(
         @NotNull String targetId,
-        @NotNull String kind,
+        @NotNull EActivityKind kind,
         @NotNull String content,
         double numberValue
     ) {}
@@ -317,7 +322,7 @@ public class CommunityService {
         String author
     ) {}
 
-    public record TicketRequest(@NotNull String targetId, @NotNull String kind, @NotNull String message) {}
+    public record TicketRequest(@NotNull String targetId, @NotNull ETicketKind kind, @NotNull String message) {}
 
     public record TicketView(
         String id,

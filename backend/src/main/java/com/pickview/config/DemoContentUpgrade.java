@@ -2,6 +2,8 @@ package com.pickview.config;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pickview.domain.EAccessTerm;
+import com.pickview.domain.WonAmount;
 import com.pickview.model.Product;
 import com.pickview.repository.IProductRepository;
 import java.io.InputStream;
@@ -54,8 +56,8 @@ public class DemoContentUpgrade implements CommandLineRunner {
         product.revise(
             content.path("title").asText(),
             content.path("description").asText(),
-            product.getPriceWon(),
-            product.getTermDays()
+            new WonAmount(product.getPriceWon()),
+            EAccessTerm.parseDays(product.getTermDays())
         );
         product.changePresentation(content.path("category").asText(), content.path("thumbnail").asText());
         product.changeTags(content.path("tags").asText());

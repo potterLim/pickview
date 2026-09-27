@@ -7,10 +7,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pickview.api.ApiFailure;
-import com.pickview.domain.EApprovalDecision;
 import com.pickview.commerce.CommerceService;
 import com.pickview.community.CommunityService;
 import com.pickview.config.DemoContentUpgrade;
+import com.pickview.domain.AccountId;
+import com.pickview.domain.EActivityKind;
+import com.pickview.domain.EApprovalDecision;
+import com.pickview.domain.EPaymentChannel;
+import com.pickview.domain.EPaymentOutcome;
+import com.pickview.domain.ETicketKind;
+import com.pickview.domain.ProductId;
+import com.pickview.domain.TicketId;
 import com.pickview.model.Account;
 import com.pickview.model.Grant;
 import com.pickview.model.OrderLine;
@@ -139,7 +146,7 @@ class MarketplaceIntegrationTest {
         assertEquals("sample-video-1.mp4", sample.getMediaKey());
         assertEquals("APPROVED", sample.getStatus());
         assertEquals(1234, sample.getPriceWon());
-        assertTrue(mCommerce.canWatch("buyer", "video-1"));
+        assertTrue(mCommerce.canWatch(new AccountId("buyer"), new ProductId("video-1")));
         sample.replaceMedia("creator-upload.mp4", "creator-preview.mp4", 60);
         upgrade.run();
         assertEquals("creator-upload.mp4", sample.getMediaKey());
@@ -149,9 +156,9 @@ class MarketplaceIntegrationTest {
     @Test
     void expiredGrantsDenyPlaybackButAllowRepurchase() {
         mGrants.save(new Grant("expired", "buyer", "video", "old-line", 1, false));
-        assertFalse(mCommerce.canWatch("buyer", "video"));
-        mCommerce.checkout(mBuyer, new CommerceService.CheckoutRequest(List.of("video"), "new", "CARD", "SUCCESS"));
-        assertTrue(mCommerce.canWatch("buyer", "video"));
+        assertFalse(mCommerce.canWatch(new AccountId("buyer"), new ProductId("video")));
+        mCommerce.checkout(mBuyer, new CommerceService.CheckoutRequest(List.of(new ProductId("video")), "new", EPaymentChannel.CARD, EPaymentOutcome.SUCCESS));
+        assertTrue(mCommerce.canWatch(new AccountId("buyer"), new ProductId("video")));
     }
 
     @Test
@@ -159,8 +166,8 @@ class MarketplaceIntegrationTest {
         saveHistoricalLine("refunded", 15000, "previous-settlement");
         mGrants.save(new Grant("grant", "buyer", "video", "refunded", 0, false));
         mTickets.save(new Ticket("refund-ticket", "buyer", "refunded", "", "REFUND", "Request", "OPEN", "", 1));
-        mOperations.resolveTicket(mAdmin, "refund-ticket", "Approved", EApprovalDecision.APPROVE);
-        assertFalse(mCommerce.canWatch("buyer", "video"));
+        mOperations.resolveTicket(mAdmin, new TicketId("refund-ticket"), "Approved", EApprovalDecision.APPROVE);
+        assertFalse(mCommerce.canWatch(new AccountId("buyer"), new ProductId("video")));
         assertEquals(15000, mAdjustments.findById("refunded").orElseThrow().getAmountWon());
         assertEquals(-15000, mOperations.getSellerSettlementSummary("seller").pendingWon());
         saveHistoricalLine("eligible", 30000, "");
@@ -168,14 +175,14 @@ class MarketplaceIntegrationTest {
         assertTrue(mAdjustments.findPending("seller", "").isEmpty());
         assertEquals(0, mOperations.getSellerSettlementSummary("seller").pendingWon());
         assertThrows(ApiFailure.class, () -> mOperations.settle(mAdmin, "seller"));
-        assertThrows(ApiFailure.class, () -> mOperations.resolveTicket(mAdmin, "refund-ticket", "Again", EApprovalDecision.APPROVE));
+        assertThrows(ApiFailure.class, () -> mOperations.resolveTicket(mAdmin, new TicketId("refund-ticket"), "Again", EApprovalDecision.APPROVE));
     }
 
     @Test
     void refundDebtCarriesForwardWhenNetPayoutIsBelowThreshold() {
         saveHistoricalLine("refunded", 15000, "previous-settlement");
         mTickets.save(new Ticket("refund-ticket", "buyer", "refunded", "", "REFUND", "Request", "OPEN", "", 1));
-        mOperations.resolveTicket(mAdmin, "refund-ticket", "Approved", EApprovalDecision.APPROVE);
+        mOperations.resolveTicket(mAdmin, new TicketId("refund-ticket"), "Approved", EApprovalDecision.APPROVE);
         saveHistoricalLine("small", 20000, "");
         assertThrows(ApiFailure.class, () -> mOperations.settle(mAdmin, "seller"));
         assertEquals(1, mAdjustments.findPending("seller", "").size());
@@ -184,11 +191,11 @@ class MarketplaceIntegrationTest {
 
     @Test
     void blockingPreventsInquiriesButNotSafetyReports() {
-        mCommunity.saveActivity(mBuyer, new CommunityService.ActivityRequest("seller", "BLOCK", "", 0));
+        mCommunity.saveActivity(mBuyer, new CommunityService.ActivityRequest("seller", EActivityKind.BLOCK, "", 0));
         assertThrows(ApiFailure.class, () ->
-            mCommunity.createTicket(mBuyer, new CommunityService.TicketRequest("video", "INQUIRY", "Hello"))
+            mCommunity.createTicket(mBuyer, new CommunityService.TicketRequest("video", ETicketKind.INQUIRY, "Hello"))
         );
-        mCommunity.createTicket(mBuyer, new CommunityService.TicketRequest("video", "REPORT", "Safety report"));
+        mCommunity.createTicket(mBuyer, new CommunityService.TicketRequest("video", ETicketKind.REPORT, "Safety report"));
         assertEquals(1, mCommunity.listTickets("buyer").size());
     }
 

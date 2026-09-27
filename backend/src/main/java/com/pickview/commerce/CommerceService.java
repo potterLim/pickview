@@ -2,6 +2,13 @@ package com.pickview.commerce;
 
 import com.pickview.api.ApiFailure;
 import com.pickview.catalog.CatalogService;
+import com.pickview.domain.AccountId;
+import com.pickview.domain.EAccessTerm;
+import com.pickview.domain.EFeeRate;
+import com.pickview.domain.EPaymentChannel;
+import com.pickview.domain.EPaymentOutcome;
+import com.pickview.domain.ProductId;
+import com.pickview.domain.WonAmount;
 import com.pickview.model.Account;
 import com.pickview.model.Grant;
 import com.pickview.model.Notice;
@@ -48,14 +55,14 @@ public class CommerceService {
         mEntityManager = entityManager;
     }
 
-    public boolean canWatch(String buyerId, String videoId) {
+    public boolean canWatch(AccountId buyerId, ProductId videoId) {
         return mGrants
             .findAll()
             .stream()
             .anyMatch(
                 grant ->
-                    grant.getBuyerId().equals(buyerId) &&
-                    grant.getProductId().equals(videoId) &&
+                    grant.getBuyerId().equals(buyerId.getValue()) &&
+                    grant.getProductId().equals(videoId.getValue()) &&
                     grant.isValid(System.currentTimeMillis())
             );
     }
@@ -81,8 +88,8 @@ public class CommerceService {
             request.requestKey().length() > 100 ||
             request.productIds().isEmpty() ||
             request.productIds().size() > 30 ||
-            !List.of("CARD", "EASY").contains(request.channel()) ||
-            !List.of("SUCCESS", "FAILED", "CANCELED").contains(request.outcome())
+            request.channel() == null ||
+            request.outcome() == null
         ) {
             throw new ApiFailure(400, "결제 요청을 확인하세요. / Invalid checkout.");
         }
@@ -93,12 +100,12 @@ public class CommerceService {
                 UUID.randomUUID().toString(),
                 buyer.getId(),
                 request.requestKey(),
-                request.outcome(),
-                request.channel(),
+                request.outcome().name(),
+                request.channel().name(),
                 System.currentTimeMillis()
             )
         );
-        if (!request.outcome().equals("SUCCESS")) {
+        if (request.outcome() != EPaymentOutcome.SUCCESS) {
             return describeOrder(purchase);
         }
         for (Product product : products) {
@@ -116,24 +123,24 @@ public class CommerceService {
         return describeOrder(purchase);
     }
 
-    public List<OrderView> listOrders(String buyerId) {
+    public List<OrderView> listOrders(AccountId buyerId) {
         return mPurchases
             .findAll()
             .stream()
-            .filter(purchase -> purchase.getBuyerId().equals(buyerId))
+            .filter(purchase -> purchase.getBuyerId().equals(buyerId.getValue()))
             .map(this::describeOrder)
             .toList();
     }
 
-    public List<LibraryView> listLibrary(String buyerId) {
+    public List<LibraryView> listLibrary(AccountId buyerId) {
         return mGrants
             .findAll()
             .stream()
-            .filter(grant -> grant.getBuyerId().equals(buyerId) && !grant.isRevoked())
+            .filter(grant -> grant.getBuyerId().equals(buyerId.getValue()) && !grant.isRevoked())
             .map(grant ->
                 new LibraryView(
                     grant.getId(),
-                    mCatalog.describeProduct(mCatalog.requireProduct(grant.getProductId())),
+                    mCatalog.describeProduct(mCatalog.requireProduct(new ProductId(grant.getProductId()))),
                     grant.getExpiresAt(),
                     grant.isValid(System.currentTimeMillis())
                 )
@@ -174,7 +181,7 @@ public class CommerceService {
     }
 
     private void validateCart(Account buyer, List<Product> products) {
-        Set<String> videoIds = new HashSet<>();
+        Set<ProductId> videoIds = new HashSet<>();
         for (Product product : products) {
             if (
                 !product.getStatus().equals("APPROVED") ||
@@ -183,11 +190,11 @@ public class CommerceService {
             ) {
                 throw new ApiFailure(409, "구매할 수 없는 상품입니다. / Product unavailable or self purchase.");
             }
-            for (String videoId : mCatalog.expandVideoIds(product)) {
+            for (ProductId videoId : mCatalog.expandVideoIds(product)) {
                 if (
                     mCatalog.requireProduct(videoId).isBlocked() ||
                     !videoIds.add(videoId) ||
-                    canWatch(buyer.getId(), videoId)
+                    canWatch(new AccountId(buyer.getId()), videoId)
                 ) {
                     throw new ApiFailure(
                         409,
@@ -199,8 +206,9 @@ public class CommerceService {
     }
 
     private void grantProduct(Account buyer, Purchase purchase, Product product) {
-        int channelFee = (product.getPriceWon() * 3) / 100;
-        int platformFee = ((product.getPriceWon() - channelFee) * 15) / 100;
+        WonAmount price = new WonAmount(product.getPriceWon());
+        WonAmount channelFee = price.calculateFee(EFeeRate.MOCK_CHANNEL);
+        WonAmount platformFee = price.subtract(channelFee).calculateFee(EFeeRate.PLATFORM);
         OrderLine line = mLines.save(
             new OrderLine(
                 UUID.randomUUID().toString(),
@@ -210,31 +218,34 @@ public class CommerceService {
                 product.getId(),
                 product.getTitle(),
                 product.getPriceWon(),
-                channelFee,
-                platformFee,
-                product.getPriceWon() - channelFee - platformFee,
+                channelFee.getWon(),
+                platformFee.getWon(),
+                price.subtract(channelFee).subtract(platformFee).getWon(),
                 product.getTermDays(),
                 false,
                 ""
             )
         );
-        long expiresAt = product.getTermDays() == 0 ? 0 : purchase.getCreatedAt() + product.getTermDays() * 86400000L;
-        for (String videoId : mCatalog.expandVideoIds(product)) {
+        long expiresAt = EAccessTerm.parseDays(product.getTermDays()).calculateExpiry(java.time.Instant.ofEpochMilli(purchase.getCreatedAt()));
+        for (ProductId videoId : mCatalog.expandVideoIds(product)) {
             mGrants.save(
-                new Grant(UUID.randomUUID().toString(), buyer.getId(), videoId, line.getId(), expiresAt, false)
+                new Grant(UUID.randomUUID().toString(), buyer.getId(), videoId.getValue(), line.getId(), expiresAt, false)
             );
         }
     }
 
     public record CheckoutRequest(
-        @NotNull List<String> productIds,
+        @NotNull List<ProductId> productIds,
         @NotNull String requestKey,
-        @NotNull String channel,
-        @NotNull String outcome
+        @NotNull EPaymentChannel channel,
+        @NotNull EPaymentOutcome outcome
     ) {
         public CheckoutRequest {
+            if (requestKey == null || requestKey.isBlank() || requestKey.length() > 100 || channel == null || outcome == null) {
+                throw new ApiFailure(400, "Invalid checkout request");
+            }
             if (productIds == null || productIds.isEmpty() || productIds.size() > 30
-                || productIds.stream().anyMatch(id -> id == null || id.isBlank())) {
+                || productIds.stream().anyMatch(java.util.Objects::isNull)) {
                 throw new ApiFailure(400, "Invalid product selection");
             }
             productIds = List.copyOf(productIds);

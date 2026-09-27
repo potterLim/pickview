@@ -1,5 +1,7 @@
 package com.pickview.model;
 
+import com.pickview.domain.EAccessTerm;
+import com.pickview.domain.WonAmount;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -198,11 +200,11 @@ public class Product {
         mIsBlocked = true;
     }
 
-    public void revise(String title, String description, int priceWon, int termDays) {
+    public void revise(String title, String description, WonAmount price, EAccessTerm term) {
         mTitle = title;
         mDescription = description;
-        mPriceWon = priceWon;
-        mTermDays = termDays;
+        mPriceWon = price.getWon();
+        mTermDays = term.getDays();
     }
 
     public void changePresentation(String category, String thumbnail) {

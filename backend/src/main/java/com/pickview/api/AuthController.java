@@ -1,6 +1,5 @@
 package com.pickview.api;
 
-import com.pickview.model.Account;
 import com.pickview.domain.Password;
 import com.pickview.security.AccountService;
 import jakarta.validation.Valid;
@@ -47,7 +46,7 @@ public class AuthController {
 
     @GetMapping("/api/me")
     public UserView getCurrentUser(Principal principal) {
-        return UserView.fromAccount(mAccounts.requireAccount(principal.getName()));
+        return UserView.createFromAccount(mAccounts.requireAccount(principal.getName()));
     }
 
     public record LoginRequest(@Email @NotBlank String email, @NotBlank @Size(max = 64) String password) {}
@@ -59,27 +58,4 @@ public class AuthController {
         boolean isAdult
     ) {}
 
-    public record UserView(
-        String id,
-        String email,
-        String displayName,
-        String role,
-        String sellerStatus,
-        String bio,
-        String language,
-        String interests
-    ) {
-        public static UserView fromAccount(Account account) {
-            return new UserView(
-                account.getId(),
-                account.getEmail(),
-                account.getDisplayName(),
-                account.getRole(),
-                account.getSellerStatus(),
-                account.getBio(),
-                account.getLanguage(),
-                account.getInterests()
-            );
-        }
-    }
 }

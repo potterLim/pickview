@@ -1,5 +1,6 @@
 package com.pickview.model;
 
+import com.pickview.domain.ERole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -123,8 +124,8 @@ public class Account {
         mInterests = interests;
     }
 
-    public void changeRole(String role) {
-        mRole = role;
+    public void changeRole(ERole role) {
+        mRole = role.name();
     }
 
     public void changeProfile(String displayName, String bio) {

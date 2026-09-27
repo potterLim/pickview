@@ -35,7 +35,7 @@ public class MediaController {
     }
 
     @GetMapping("/api/public/thumbnails/{id}")
-    public ResponseEntity<FileSystemResource> thumbnail(@PathVariable String id) throws Exception {
+    public ResponseEntity<FileSystemResource> getThumbnail(@PathVariable String id) throws Exception {
         return ResponseEntity.ok()
             .header("Content-Type", "image/png")
             .header("Cache-Control", "no-cache")
@@ -66,12 +66,12 @@ public class MediaController {
     }
 
     @GetMapping("/api/media/stream/{token}")
-    public ResponseEntity<FileSystemResource> stream(@PathVariable String token) throws Exception {
+    public ResponseEntity<FileSystemResource> getStream(@PathVariable String token) throws Exception {
         return serveVideo(mMedia.getStream(token));
     }
 
     @GetMapping("/api/public/preview/{id}")
-    public ResponseEntity<FileSystemResource> preview(@PathVariable String id) throws Exception {
+    public ResponseEntity<FileSystemResource> getPreview(@PathVariable String id) throws Exception {
         return serveVideo(mMedia.getPreview(id));
     }
 

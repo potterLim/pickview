@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 public class TimeConfiguration {
 
     @Bean
-    public Clock applicationClock() {
+    public Clock createApplicationClock() {
         return Clock.systemUTC();
     }
 }

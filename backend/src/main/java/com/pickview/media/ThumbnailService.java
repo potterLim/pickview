@@ -2,6 +2,7 @@ package com.pickview.media;
 
 import com.pickview.api.ApiFailure;
 import com.pickview.catalog.CatalogService;
+import com.pickview.domain.ProductId;
 import com.pickview.model.Account;
 import com.pickview.model.Product;
 import java.awt.image.BufferedImage;
@@ -31,7 +32,7 @@ public class ThumbnailService {
 
     @Transactional(rollbackFor = Exception.class)
     public void upload(Account account, String productId, MultipartFile file) throws Exception {
-        Product product = mCatalog.requireOwnedProduct(account, productId);
+        Product product = mCatalog.requireOwnedProduct(account, new ProductId(productId));
         if (!account.getSellerStatus().equals("APPROVED")) {
             throw new ApiFailure(403, "Approved seller required");
         }
@@ -52,7 +53,7 @@ public class ThumbnailService {
     }
 
     public Path getPublicThumbnail(String id) throws Exception {
-        Product product = mCatalog.requireProduct(id);
+        Product product = mCatalog.requireProduct(new ProductId(id));
         if (
             !product.getStatus().equals("APPROVED") ||
             product.isBlocked() ||

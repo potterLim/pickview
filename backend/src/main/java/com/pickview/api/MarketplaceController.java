@@ -3,6 +3,11 @@ package com.pickview.api;
 import com.pickview.catalog.CatalogService;
 import com.pickview.commerce.CommerceService;
 import com.pickview.community.CommunityService;
+import com.pickview.domain.AccountId;
+import com.pickview.domain.EPublicationAction;
+import com.pickview.domain.ESellerType;
+import com.pickview.domain.NoticeId;
+import com.pickview.domain.ProductId;
 import com.pickview.model.Account;
 import com.pickview.model.Product;
 import com.pickview.repository.IOrderLineRepository;
@@ -51,7 +56,7 @@ public class MarketplaceController {
 
     @GetMapping("/api/public/products/{id}")
     public CatalogService.ProductView getProduct(@PathVariable String id) {
-        Product product = mCatalog.requireProduct(id);
+        Product product = mCatalog.requireProduct(new ProductId(id));
         if (!product.getStatus().equals("APPROVED") || product.isBlocked()) {
             throw new ApiFailure(404, "Product unavailable");
         }
@@ -79,12 +84,12 @@ public class MarketplaceController {
 
     @GetMapping("/api/orders")
     public List<CommerceService.OrderView> listOrders(Principal principal) {
-        return mCommerce.listOrders(principal.getName());
+        return mCommerce.listOrders(new AccountId(principal.getName()));
     }
 
     @GetMapping("/api/library")
     public List<CommerceService.LibraryView> listLibrary(Principal principal) {
-        return mCommerce.listLibrary(principal.getName());
+        return mCommerce.listLibrary(new AccountId(principal.getName()));
     }
 
     @GetMapping("/api/activity")
@@ -124,7 +129,7 @@ public class MarketplaceController {
 
     @PostMapping("/api/notices/{id}/read")
     public void readNotice(Principal principal, @PathVariable String id) {
-        mCommunity.readNotice(principal.getName(), id);
+        mCommunity.readNotice(principal.getName(), new NoticeId(id));
     }
 
     @PutMapping("/api/settings")
@@ -143,7 +148,7 @@ public class MarketplaceController {
             request.displayName().isBlank() ||
             request.displayName().length() > 80 ||
             request.bio().length() > 1000 ||
-            !List.of("PERSONAL", "BUSINESS").contains(request.type())
+            request.type() == null
         ) {
             throw new ApiFailure(400, "Invalid seller profile");
         }
@@ -156,7 +161,7 @@ public class MarketplaceController {
 
     @GetMapping("/api/seller/products")
     public List<CatalogService.ProductView> listSellerProducts(Principal principal) {
-        return mCatalog.listOwned(principal.getName());
+        return mCatalog.listOwned(new AccountId(principal.getName()));
     }
 
     @PutMapping("/api/seller/profile")
@@ -186,12 +191,12 @@ public class MarketplaceController {
         @PathVariable String id,
         @Valid @RequestBody CatalogService.ProductRequest request
     ) {
-        mCatalog.updateProduct(mAccounts.requireAccount(principal.getName()), id, request);
+        mCatalog.updateProduct(mAccounts.requireAccount(principal.getName()), new ProductId(id), request);
     }
 
     @PostMapping("/api/seller/products/{id}/{action}")
     public void publish(Principal principal, @PathVariable String id, @PathVariable String action) {
-        mCatalog.changePublication(mAccounts.requireAccount(principal.getName()), id, action);
+        mCatalog.changePublication(mAccounts.requireAccount(principal.getName()), new ProductId(id), EPublicationAction.valueOf(action));
     }
 
     @GetMapping("/api/seller/sales")
@@ -206,7 +211,7 @@ public class MarketplaceController {
 
     public record ReplyRequest(@NotNull String reply) {}
 
-    public record SellerRequest(@NotNull String displayName, @NotNull String bio, @NotNull String type) {}
+    public record SellerRequest(@NotNull String displayName, @NotNull String bio, @NotNull ESellerType type) {}
 
     public record SettingsRequest(@NotNull String language, @NotNull String interests) {}
 }

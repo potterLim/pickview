@@ -1,11 +1,17 @@
 package com.pickview.operations;
 
 import com.pickview.api.ApiFailure;
-import com.pickview.domain.EApprovalDecision;
-import com.pickview.api.AuthController.UserView;
+import com.pickview.api.UserView;
 import com.pickview.catalog.CatalogService;
 import com.pickview.commerce.CommerceService;
 import com.pickview.community.CommunityService;
+import com.pickview.domain.AccountId;
+import com.pickview.domain.EApprovalDecision;
+import com.pickview.domain.EProductDecision;
+import com.pickview.domain.ERole;
+import com.pickview.domain.OrderLineId;
+import com.pickview.domain.ProductId;
+import com.pickview.domain.TicketId;
 import com.pickview.model.Account;
 import com.pickview.model.Audit;
 import com.pickview.model.Grant;
@@ -84,13 +90,13 @@ public class OperationsService {
     }
 
     public DashboardView getDashboard(Account operator) {
-        requireRole(operator, "CONTENT", "SUPPORT", "FINANCE");
-        boolean canReviewContent = hasRole(operator, "CONTENT");
-        boolean canHandleSupport = hasRole(operator, "SUPPORT");
-        boolean canManageFinance = hasRole(operator, "FINANCE");
+        requireRole(operator, ERole.CONTENT, ERole.SUPPORT, ERole.FINANCE);
+        boolean canReviewContent = hasRole(operator, ERole.CONTENT);
+        boolean canHandleSupport = hasRole(operator, ERole.SUPPORT);
+        boolean canManageFinance = hasRole(operator, ERole.FINANCE);
         boolean isAdministrator = operator.getRole().equals("ADMIN");
         return new DashboardView(
-            canReviewContent ? mAccounts.findAll().stream().map(UserView::fromAccount).toList() : List.of(),
+            canReviewContent ? mAccounts.findAll().stream().map(UserView::createFromAccount).toList() : List.of(),
             canReviewContent ? mProducts.findAll().stream().map(mCatalog::describeProduct).toList() : List.of(),
             mTickets
                 .findAll()
@@ -132,49 +138,49 @@ public class OperationsService {
     }
 
     @Transactional
-    public void reviewSeller(Account operator, String id, EApprovalDecision decision) {
-        requireRole(operator, "CONTENT");
-        Account seller = mAccounts.findById(id).orElseThrow(() -> new ApiFailure(404, "Seller not found"));
+    public void reviewSeller(Account operator, AccountId id, EApprovalDecision decision) {
+        requireRole(operator, ERole.CONTENT);
+        Account seller = mAccounts.findById(id.getValue()).orElseThrow(() -> new ApiFailure(404, "Seller not found"));
         if (decision == EApprovalDecision.APPROVE) {
             seller.approveSeller();
         } else {
             seller.rejectSeller();
         }
-        audit(operator, "SELLER_REVIEW", id, decision == EApprovalDecision.APPROVE ? "APPROVED" : "REJECTED");
-        mCommunity.notifyUser(id, "판매자 심사 완료 / Seller application reviewed");
+        audit(operator, "SELLER_REVIEW", id.getValue(), decision == EApprovalDecision.APPROVE ? "APPROVED" : "REJECTED");
+        mCommunity.notifyUser(id.getValue(), "판매자 심사 완료 / Seller application reviewed");
     }
 
     @Transactional
-    public void reviewProduct(Account operator, String id, String decision) {
-        requireRole(operator, "CONTENT");
+    public void reviewProduct(Account operator, ProductId id, EProductDecision decision) {
+        requireRole(operator, ERole.CONTENT);
         Product product = mCatalog.requireProduct(id);
         boolean wasPublished = product.getStatus().equals("APPROVED");
         switch (decision) {
-            case "APPROVE" -> {
+            case APPROVE -> {
                 if (product.getKind().equals("VIDEO") && product.getMediaKey().isBlank()) {
                     throw new ApiFailure(409, "Missing video");
                 }
                 product.publish();
             }
-            case "REJECT" -> product.reject();
-            case "WITHDRAW" -> product.withdraw();
-            case "BLOCK" -> product.block();
+            case REJECT -> product.reject();
+            case WITHDRAW -> product.withdraw();
+            case BLOCK -> product.block();
             default -> throw new ApiFailure(400, "Invalid decision");
         }
-        audit(operator, "PRODUCT_REVIEW", id, decision);
+        audit(operator, "PRODUCT_REVIEW", id.getValue(), decision.name());
         mCommunity.notifyUser(product.getSellerId(), "영상 심사 결과 / Video review: " + decision);
-        if (decision.equals("APPROVE") && !wasPublished) {
+        if (decision == EProductDecision.APPROVE && !wasPublished) {
             mCommunity.notifyPublication(product);
         }
     }
 
     @Transactional
-    public void resolveTicket(Account operator, String id, String reply, EApprovalDecision decision) {
-        Ticket ticket = mEntityManager.find(Ticket.class, id, LockModeType.PESSIMISTIC_WRITE);
+    public void resolveTicket(Account operator, TicketId id, String reply, EApprovalDecision decision) {
+        Ticket ticket = mEntityManager.find(Ticket.class, id.getValue(), LockModeType.PESSIMISTIC_WRITE);
         if (ticket == null) {
             throw new ApiFailure(404, "Ticket not found");
         }
-        requireRole(operator, ticket.getKind().equals("REPORT") ? "CONTENT" : "SUPPORT");
+        requireRole(operator, ticket.getKind().equals("REPORT") ? ERole.CONTENT : ERole.SUPPORT);
         if (
             ticket.getKind().equals("INQUIRY") ||
             !ticket.getStatus().equals("OPEN") ||
@@ -184,29 +190,29 @@ public class OperationsService {
             throw new ApiFailure(409, "처리할 수 없는 문의입니다. / Ticket cannot be resolved.");
         }
         if (ticket.getKind().equals("REFUND") && decision == EApprovalDecision.APPROVE) {
-            refundLine(ticket.getTargetId());
+            refundLine(new OrderLineId(ticket.getTargetId()));
         }
         ticket.resolve(reply, decision == EApprovalDecision.APPROVE ? "APPROVED" : "REJECTED");
-        audit(operator, "TICKET_RESOLVED", id, reply);
+        audit(operator, "TICKET_RESOLVED", id.getValue(), reply);
         mCommunity.notifyUser(ticket.getUserId(), "문의 처리 완료 / Your request was resolved");
     }
 
     @Transactional
-    public void changeRole(Account operator, String id, String role) {
+    public void changeRole(Account operator, AccountId id, ERole role) {
         requireRole(operator);
-        if (operator.getId().equals(id) || !List.of("BUYER", "ADMIN", "CONTENT", "SUPPORT", "FINANCE").contains(role)) {
+        if (operator.getId().equals(id.getValue()) || role == null) {
             throw new ApiFailure(400, "Invalid role change");
         }
         mAccounts
-            .findById(id)
+            .findById(id.getValue())
             .orElseThrow(() -> new ApiFailure(404, "Account not found"))
             .changeRole(role);
-        audit(operator, "ROLE_CHANGED", id, role);
+        audit(operator, "ROLE_CHANGED", id.getValue(), role.name());
     }
 
     @Transactional
     public int settle(Account operator, String sellerId) {
-        requireRole(operator, "FINANCE");
+        requireRole(operator, ERole.FINANCE);
         if (mEntityManager.find(Account.class, sellerId, LockModeType.PESSIMISTIC_WRITE) == null) {
             throw new ApiFailure(404, "Seller not found");
         }
@@ -246,11 +252,11 @@ public class OperationsService {
         return amount;
     }
 
-    private void refundLine(String id) {
-        OrderLine existing = mLines.findById(id).orElseThrow(() -> new ApiFailure(404, "Order not found"));
+    private void refundLine(OrderLineId id) {
+        OrderLine existing = mLines.findById(id.getValue()).orElseThrow(() -> new ApiFailure(404, "Order not found"));
         // Use the same seller lock as settlement so refund and payout cannot race.
         mEntityManager.find(Account.class, existing.getSellerId(), LockModeType.PESSIMISTIC_WRITE);
-        OrderLine line = mEntityManager.find(OrderLine.class, id, LockModeType.PESSIMISTIC_WRITE);
+        OrderLine line = mEntityManager.find(OrderLine.class, id.getValue(), LockModeType.PESSIMISTIC_WRITE);
         if (line == null) {
             throw new ApiFailure(404, "Order not found");
         }
@@ -265,7 +271,7 @@ public class OperationsService {
         mGrants
             .findAll()
             .stream()
-            .filter(grant -> grant.getLineId().equals(id))
+            .filter(grant -> grant.getLineId().equals(id.getValue()))
             .forEach(Grant::revoke);
         boolean allRefunded = mLines
             .findAll()
@@ -277,12 +283,12 @@ public class OperationsService {
         }
     }
 
-    private boolean hasRole(Account operator, String role) {
-        return operator.getRole().equals("ADMIN") || operator.getRole().equals(role);
+    private boolean hasRole(Account operator, ERole role) {
+        return operator.getRole().equals("ADMIN") || operator.getRole().equals(role.name());
     }
 
-    private void requireRole(Account operator, String... roles) {
-        if (!operator.getRole().equals("ADMIN") && !List.of(roles).contains(operator.getRole())) {
+    private void requireRole(Account operator, ERole... roles) {
+        if (!operator.getRole().equals("ADMIN") && !List.of(roles).contains(ERole.valueOf(operator.getRole()))) {
             throw new ApiFailure(403, "권한이 없습니다. / Permission denied.");
         }
     }

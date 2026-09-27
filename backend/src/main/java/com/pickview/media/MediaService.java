@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pickview.api.ApiFailure;
 import com.pickview.catalog.CatalogService;
 import com.pickview.commerce.CommerceService;
+import com.pickview.domain.AccountId;
+import com.pickview.domain.ProductId;
 import com.pickview.model.Account;
 import com.pickview.model.Product;
 import com.pickview.repository.IAccountRepository;
@@ -53,7 +55,7 @@ public class MediaService {
     @Transactional(rollbackFor = Exception.class)
     public void uploadVideo(Account seller, String productId, MultipartFile file, double previewSeconds)
         throws Exception {
-        Product product = mCatalog.requireOwnedProduct(seller, productId);
+        Product product = mCatalog.requireOwnedProduct(seller, new ProductId(productId));
         if (!seller.getSellerStatus().equals("APPROVED") || !product.getKind().equals("VIDEO")) {
             throw new ApiFailure(403, "Seller video required");
         }
@@ -101,8 +103,8 @@ public class MediaService {
     }
 
     public String issueTicket(String buyerId, String productId) {
-        Product product = mCatalog.requireProduct(productId);
-        if (product.isBlocked() || !mCommerce.canWatch(buyerId, productId)) {
+        Product product = mCatalog.requireProduct(new ProductId(productId));
+        if (product.isBlocked() || !mCommerce.canWatch(new AccountId(buyerId), new ProductId(productId))) {
             throw new ApiFailure(403, "시청 권한이 없습니다. / Playback access denied.");
         }
         mTickets.entrySet().removeIf(entry -> entry.getValue().expiresAt() < System.currentTimeMillis());
@@ -115,7 +117,7 @@ public class MediaService {
     }
 
     public String issueReviewTicket(Account account, String productId) {
-        Product product = mCatalog.requireProduct(productId);
+        Product product = mCatalog.requireProduct(new ProductId(productId));
         if (!canInspect(account, product) || product.getMediaKey().isBlank()) {
             throw new ApiFailure(403, "Review access denied");
         }
@@ -133,7 +135,7 @@ public class MediaService {
         if (ticketOrNull == null || ticketOrNull.expiresAt() < System.currentTimeMillis()) {
             throw new ApiFailure(403, "Playback link expired");
         }
-        Product product = mCatalog.requireProduct(ticketOrNull.productId());
+        Product product = mCatalog.requireProduct(new ProductId(ticketOrNull.productId()));
         if (ticketOrNull.review()) {
             Account account = mAccounts
                 .findById(ticketOrNull.buyerId())
@@ -141,14 +143,14 @@ public class MediaService {
             if (!canInspect(account, product)) {
                 throw new ApiFailure(403, "Review access revoked");
             }
-        } else if (product.isBlocked() || !mCommerce.canWatch(ticketOrNull.buyerId(), product.getId())) {
+        } else if (product.isBlocked() || !mCommerce.canWatch(new AccountId(ticketOrNull.buyerId()), new ProductId(product.getId()))) {
             throw new ApiFailure(403, "Playback access revoked");
         }
         return mStorage.getFile(product.getMediaKey());
     }
 
     public Path getPreview(String productId) throws Exception {
-        Product product = mCatalog.requireProduct(productId);
+        Product product = mCatalog.requireProduct(new ProductId(productId));
         if (!product.getStatus().equals("APPROVED") || product.isBlocked() || product.getPreviewKey().isBlank()) {
             throw new ApiFailure(404, "Preview unavailable");
         }

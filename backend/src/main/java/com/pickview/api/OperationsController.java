@@ -1,11 +1,16 @@
 package com.pickview.api;
 
+import com.pickview.domain.AccountId;
 import com.pickview.domain.EApprovalDecision;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.NotBlank;
+import com.pickview.domain.EProductDecision;
+import com.pickview.domain.ERole;
+import com.pickview.domain.ProductId;
+import com.pickview.domain.TicketId;
 import com.pickview.operations.OperationsService;
 import com.pickview.security.AccountService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.security.Principal;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,27 +42,27 @@ public class OperationsController {
 
     @PostMapping("/api/admin/sellers/{id}")
     public void reviewSeller(Principal principal, @PathVariable String id, @Valid @RequestBody ApprovalRequest request) {
-        mOperations.reviewSeller(mAccounts.requireAccount(principal.getName()), id, request.toDecision());
+        mOperations.reviewSeller(mAccounts.requireAccount(principal.getName()), new AccountId(id), request.toDecision());
     }
 
     @PostMapping("/api/admin/products/{id}")
     public void reviewProduct(Principal principal, @PathVariable String id, @Valid @RequestBody DecisionRequest request) {
-        mOperations.reviewProduct(mAccounts.requireAccount(principal.getName()), id, request.decision());
+        mOperations.reviewProduct(mAccounts.requireAccount(principal.getName()), new ProductId(id), request.decision());
     }
 
     @PostMapping("/api/admin/tickets/{id}")
     public void resolveTicket(Principal principal, @PathVariable String id, @Valid @RequestBody ResolutionRequest request) {
         mOperations.resolveTicket(
             mAccounts.requireAccount(principal.getName()),
-            id,
+            new TicketId(id),
             request.reply(),
             request.toDecision()
         );
     }
 
     @PostMapping("/api/admin/roles/{id}")
-    public void changeRole(Principal principal, @PathVariable String id, @Valid @RequestBody DecisionRequest request) {
-        mOperations.changeRole(mAccounts.requireAccount(principal.getName()), id, request.decision());
+    public void changeRole(Principal principal, @PathVariable String id, @Valid @RequestBody RoleRequest request) {
+        mOperations.changeRole(mAccounts.requireAccount(principal.getName()), new AccountId(id), request.decision());
     }
 
     @PostMapping("/api/admin/settlements/{id}")
@@ -65,7 +70,10 @@ public class OperationsController {
         return Map.of("amountWon", mOperations.settle(mAccounts.requireAccount(principal.getName()), id));
     }
 
-    public record DecisionRequest(@NotBlank String decision) {
+    public record DecisionRequest(@NotNull EProductDecision decision) {
+    }
+
+    public record RoleRequest(@NotNull ERole decision) {
     }
 
     public record ApprovalRequest(@NotNull Boolean approve) {
