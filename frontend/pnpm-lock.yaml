@@ -51,12 +51,6 @@ importers:
       eslint-plugin-react-hooks:
         specifier: 7.1.1
         version: 7.1.1(eslint@9.39.5(supports-color@8.1.1))(supports-color@8.1.1)
-      prettier:
-        specifier: 3.9.9
-        version: 3.9.9
-      prettier-plugin-java:
-        specifier: 2.10.4
-        version: 2.10.4(prettier@3.9.9)
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
@@ -2036,16 +2030,6 @@ packages:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
 
-  prettier-plugin-java@2.10.4:
-    resolution: {integrity: sha512-Hinkucn49lx848MnWEktfGozLPp9dMYtdKPG+Z3pridBv71PJIVibe4jp0Lzb+rcA3eMZfU5+oWtJoI2oQ2XTg==}
-    peerDependencies:
-      prettier: ^3.0.0
-
-  prettier@3.9.9:
-    resolution: {integrity: sha512-Z/CJHIkdujO/OtN7nXUii0Rf3VT5SRuhjBA82Xvu2XhBUgX3nhP67T0LHceBdQLex7OOFGTox+Q5Yg8Jk2Qivg==}
-    engines: {node: '>=14'}
-    hasBin: true
-
   pretty-format@29.7.0:
     resolution: {integrity: sha512-Pdlw/oPxN+aXdmM9R00JVC9WVFoCLTKJvDVLgmJ+qAffBMxsV85l/Lu7sNx4zSzPyoL2euImuEwHhOXdEgNFZQ==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
@@ -2433,9 +2417,6 @@ packages:
 
   wcwidth@1.0.1:
     resolution: {integrity: sha512-XHPEwS0q6TaxcvG85+8EYkbiCux2XtWG2mkc47Ng2A77BQu9+DqIOJldST4HgPkuea7dvKSj5VgX3P1d4rW8Tg==}
-
-  web-tree-sitter@0.27.0:
-    resolution: {integrity: sha512-XK08gj6RwTMQatAG7uVRP8MunqotL/XC19vHgkSPKmELgbGPBj4ECvB8haHOUnyj6ls2B8t42UTro14zxGgAHg==}
 
   webidl-conversions@3.0.1:
     resolution: {integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==}
@@ -4940,13 +4921,6 @@ snapshots:
 
   prelude-ls@1.2.1: {}
 
-  prettier-plugin-java@2.10.4(prettier@3.9.9):
-    dependencies:
-      prettier: 3.9.9
-      web-tree-sitter: 0.27.0
-
-  prettier@3.9.9: {}
-
   pretty-format@29.7.0:
     dependencies:
       '@jest/schemas': 29.6.3
@@ -5328,8 +5302,6 @@ snapshots:
   wcwidth@1.0.1:
     dependencies:
       defaults: 1.0.4
-
-  web-tree-sitter@0.27.0: {}
 
   webidl-conversions@3.0.1: {}
 

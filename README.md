@@ -184,7 +184,7 @@ pnpm --dir frontend check
 pnpm --dir frontend export:web
 ```
 
-`pnpm check`는 TypeScript, 타입 기반 ESLint·React Hook 검사, 클라이언트 회귀 테스트, Java/TypeScript/스크립트 서식 검사를 실행합니다. Maven `verify`는 Java 명명·구조 규칙 검사와 통합 테스트를 포함합니다. [GitHub Actions](.github/workflows/verify.yml)는 푸시와 PR에서 이 검사와 웹 빌드를 실행합니다. 자동 배포는 하지 않습니다.
+`pnpm check`는 TypeScript, 타입 기반 ESLint·React Hook 검사, 클라이언트 회귀 테스트를 실행합니다. Maven `verify`는 Java 명명·구조 규칙 검사와 통합 테스트를 포함합니다. [GitHub Actions](.github/workflows/verify.yml)는 푸시와 PR에서 이 검사와 웹 빌드를 실행합니다. 자동 배포는 하지 않습니다.
 
 ### 실행 중인 서버의 흐름 검증
 
@@ -225,5 +225,8 @@ node scripts/api-smoke.mjs
 - `docs`: 제품 제작 명세.
 - `.github/workflows`: GitHub 자동 검증 설정.
 - `.run`: IntelliJ 공유 실행 설정.
+- `.idea/codeStyles`: IntelliJ 공유 서식 설정.
 
 함수는 하나의 논리적 책임을 갖습니다. 파일은 책임·의존성·변경 이유가 나뉠 때 분리하며 길다는 이유만으로 나누지 않습니다. 커밋은 영문 `type: summary` 형식으로 관리합니다.
+
+단순한 표현식은 한 줄을 기본으로 하며, 글자 수만으로 줄바꿈을 강제하지 않습니다. 복잡한 조건·인수 목록·스트림 처리 단계·JSX 계층은 읽기 쉬운 논리적 경계에서 나눕니다. IntelliJ 프로젝트 서식은 기존 줄바꿈을 보존하며, Prettier의 폭 기반 서식 검사는 사용하지 않습니다. 개인 IDE의 저장 시 Prettier 실행 설정이 켜져 있다면 이 프로젝트에서는 해제합니다.
