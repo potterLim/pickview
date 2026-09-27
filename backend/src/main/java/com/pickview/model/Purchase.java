@@ -1,5 +1,9 @@
 package com.pickview.model;
 
+import com.pickview.domain.EPaymentChannel;
+
+import com.pickview.domain.EOrderStatus;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -37,12 +41,12 @@ public class Purchase {
         // Required by JPA; application code uses the complete constructor.
     }
 
-    public Purchase(String id, String buyerId, String requestKey, String status, String channel, long createdAt) {
+    public Purchase(String id, String buyerId, String requestKey, EOrderStatus status, EPaymentChannel channel, long createdAt) {
         mId = id;
         mBuyerId = buyerId;
         mRequestKey = requestKey;
-        mStatus = status;
-        mChannel = channel;
+        mStatus = status.name();
+        mChannel = channel.name();
         mCreatedAt = createdAt;
     }
 
@@ -58,12 +62,12 @@ public class Purchase {
         return mRequestKey;
     }
 
-    public String getStatus() {
-        return mStatus;
+    public EOrderStatus getStatus() {
+        return EOrderStatus.valueOf(mStatus);
     }
 
-    public String getChannel() {
-        return mChannel;
+    public EPaymentChannel getChannel() {
+        return EPaymentChannel.valueOf(mChannel);
     }
 
     public long getCreatedAt() {
@@ -71,6 +75,6 @@ public class Purchase {
     }
 
     public void refund() {
-        mStatus = "REFUNDED";
+        mStatus = EOrderStatus.REFUNDED.name();
     }
 }

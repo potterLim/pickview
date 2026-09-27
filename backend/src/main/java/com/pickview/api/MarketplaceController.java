@@ -57,7 +57,7 @@ public class MarketplaceController {
     @GetMapping("/api/public/products/{id}")
     public CatalogService.ProductView getProduct(@PathVariable String id) {
         Product product = mCatalog.requireProduct(new ProductId(id));
-        if (!product.getStatus().equals("APPROVED") || product.isBlocked()) {
+        if (!product.getStatus().equals(com.pickview.domain.EProductStatus.APPROVED) || product.isBlocked()) {
             throw new ApiFailure(404, "Product unavailable");
         }
         return mCatalog.describeProduct(product);
@@ -153,7 +153,7 @@ public class MarketplaceController {
             throw new ApiFailure(400, "Invalid seller profile");
         }
         Account account = mAccounts.requireAccount(principal.getName());
-        if (account.getSellerStatus().equals("APPROVED")) {
+        if (account.getSellerStatus().equals(com.pickview.domain.ESellerStatus.APPROVED)) {
             throw new ApiFailure(409, "Already approved");
         }
         account.applySeller(request.displayName(), request.type() + ": " + request.bio());
@@ -168,7 +168,7 @@ public class MarketplaceController {
     @Transactional
     public void updateSellerProfile(Principal principal, @Valid @RequestBody SellerRequest request) {
         Account account = mAccounts.requireAccount(principal.getName());
-        if (!account.getSellerStatus().equals("APPROVED")) {
+        if (!account.getSellerStatus().equals(com.pickview.domain.ESellerStatus.APPROVED)) {
             throw new ApiFailure(403, "Approved seller required");
         }
         if (request.displayName().isBlank() || request.displayName().length() > 80 || request.bio().length() > 1000) {

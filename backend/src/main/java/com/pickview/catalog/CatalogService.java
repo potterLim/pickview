@@ -58,7 +58,7 @@ public class CatalogService {
         return mProducts
             .findAll()
             .stream()
-            .filter(product -> product.getStatus().equals("APPROVED") && !product.isBlocked())
+            .filter(product -> product.getStatus().equals(com.pickview.domain.EProductStatus.APPROVED) && !product.isBlocked())
             .map(this::describeProduct)
             .toList();
     }
@@ -77,7 +77,7 @@ public class CatalogService {
         List<Engagement> reviews = mEngagements
             .findAll()
             .stream()
-            .filter(item -> item.getKind().equals("REVIEW") && item.getTargetId().equals(product.getId()))
+            .filter(item -> item.getKind().equals(com.pickview.domain.EActivityKind.REVIEW) && item.getTargetId().equals(product.getId()))
             .toList();
         double rating = reviews.stream().mapToDouble(Engagement::getNumberValue).average().orElse(0);
         long sales = mLines
@@ -110,7 +110,7 @@ public class CatalogService {
     }
 
     public List<ProductId> expandVideoIds(Product product) {
-        if (product.getKind().equals("VIDEO")) {
+        if (product.getKind().equals(com.pickview.domain.EProductKind.VIDEO)) {
             return List.of(new ProductId(product.getId()));
         }
         return Arrays.stream(product.getBundleIds().split(","))
@@ -121,7 +121,7 @@ public class CatalogService {
 
     @Transactional
     public Product createProduct(Account seller, ProductRequest request) {
-        if (!seller.getSellerStatus().equals("APPROVED")) {
+        if (!seller.getSellerStatus().equals(com.pickview.domain.ESellerStatus.APPROVED)) {
             throw new ApiFailure(403, "판매자 승인이 필요합니다. / Seller approval required.");
         }
         validateProduct(request);
@@ -138,8 +138,8 @@ public class CatalogService {
                 Product video = requireProduct(id);
                 if (
                     !video.getSellerId().equals(seller.getId()) ||
-                    !video.getKind().equals("VIDEO") ||
-                    !video.getStatus().equals("APPROVED")
+                    !video.getKind().equals(com.pickview.domain.EProductKind.VIDEO) ||
+                    !video.getStatus().equals(com.pickview.domain.EProductStatus.APPROVED)
                 ) {
                     throw new ApiFailure(400, "본인의 승인된 영상만 묶을 수 있습니다. / Approved own videos only.");
                 }
@@ -155,15 +155,15 @@ public class CatalogService {
             seller.getId(),
             request.title(),
             request.description(),
-            request.category().name(),
+            com.pickview.domain.ECategory.valueOf(request.category().name()),
             request.priceWon().getWon(),
             request.termDays().getDays(),
-            "DRAFT",
+            com.pickview.domain.EProductStatus.DRAFT,
             request.thumbnail(),
             "",
             "",
             0,
-            request.kind().name(),
+            com.pickview.domain.EProductKind.valueOf(request.kind().name()),
             bundleIds,
             false,
             System.currentTimeMillis()
@@ -177,8 +177,8 @@ public class CatalogService {
         Product product = requireOwnedProduct(seller, id);
         validateProduct(request);
         if (
-            !product.getKind().equals(request.kind().name()) ||
-            (product.getKind().equals("BUNDLE") && !expandVideoIds(product).equals(request.videoIds()))
+            !product.getKind().equals(request.kind()) ||
+            (product.getKind().equals(com.pickview.domain.EProductKind.BUNDLE) && !expandVideoIds(product).equals(request.videoIds()))
         ) {
             throw new ApiFailure(
                 400,
@@ -186,14 +186,14 @@ public class CatalogService {
             );
         }
         if (
-            product.getKind().equals("BUNDLE") &&
+            product.getKind().equals(com.pickview.domain.EProductKind.BUNDLE) &&
             request.priceWon().getWon() >
                 expandVideoIds(product).stream().map(this::requireProduct).mapToInt(Product::getPriceWon).sum()
         ) {
             throw new ApiFailure(400, "Bundle exceeds individual total");
         }
         product.revise(request.title(), request.description(), request.priceWon().getAmount(), request.termDays());
-        product.changePresentation(request.category().name(), request.thumbnail());
+        product.changePresentation(request.category(), request.thumbnail());
         product.changeTags(request.tags());
         mAudits.save(
             new Audit(
@@ -217,7 +217,7 @@ public class CatalogService {
         if (action != EPublicationAction.SUBMIT) {
             throw new ApiFailure(400, "Invalid action");
         }
-        if (product.getKind().equals("VIDEO") && product.getMediaKey().isBlank()) {
+        if (product.getKind().equals(com.pickview.domain.EProductKind.VIDEO) && product.getMediaKey().isBlank()) {
             throw new ApiFailure(400, "영상을 먼저 업로드하세요. / Upload a video first.");
         }
         product.submit();
@@ -278,13 +278,13 @@ public class CatalogService {
         String sellerName,
         String title,
         String description,
-        String category,
+        ECategory category,
         int priceWon,
         int termDays,
-        String status,
+        com.pickview.domain.EProductStatus status,
         String thumbnail,
         double durationSeconds,
-        String kind,
+        EProductKind kind,
         List<String> videoIds,
         double rating,
         int reviewCount,

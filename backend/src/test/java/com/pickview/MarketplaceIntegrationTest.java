@@ -102,15 +102,15 @@ class MarketplaceIntegrationTest {
                 "seller",
                 "Title",
                 "Description",
-                "EDUCATION",
+                com.pickview.domain.ECategory.EDUCATION,
                 20000,
                 30,
-                "APPROVED",
+                com.pickview.domain.EProductStatus.APPROVED,
                 "studio",
                 "test.mp4",
                 "preview.mp4",
                 30,
-                "VIDEO",
+                com.pickview.domain.EProductKind.VIDEO,
                 "",
                 false,
                 1
@@ -126,15 +126,15 @@ class MarketplaceIntegrationTest {
                 "seller",
                 "Old sample",
                 "Description",
-                "EDUCATION",
+                com.pickview.domain.ECategory.EDUCATION,
                 1234,
                 30,
-                "APPROVED",
+                com.pickview.domain.EProductStatus.APPROVED,
                 "studio",
                 "demo.mp4",
                 "demo-preview.mp4",
                 30,
-                "VIDEO",
+                com.pickview.domain.EProductKind.VIDEO,
                 "",
                 false,
                 1
@@ -144,13 +144,13 @@ class MarketplaceIntegrationTest {
         DemoContentUpgrade upgrade = new DemoContentUpgrade(mProducts, new ObjectMapper(), true);
         upgrade.run();
         assertEquals("sample-video-1.mp4", sample.getMediaKey());
-        assertEquals("APPROVED", sample.getStatus());
+        assertEquals(com.pickview.domain.EProductStatus.APPROVED, sample.getStatus());
         assertEquals(1234, sample.getPriceWon());
         assertTrue(mCommerce.canWatch(new AccountId("buyer"), new ProductId("video-1")));
         sample.replaceMedia("creator-upload.mp4", "creator-preview.mp4", 60);
         upgrade.run();
         assertEquals("creator-upload.mp4", sample.getMediaKey());
-        assertEquals("PENDING", sample.getStatus());
+        assertEquals(com.pickview.domain.EProductStatus.PENDING, sample.getStatus());
     }
 
     @Test
@@ -165,7 +165,7 @@ class MarketplaceIntegrationTest {
     void settledRefundIsDeductedExactlyOnceFromNextPayout() {
         saveHistoricalLine("refunded", 15000, "previous-settlement");
         mGrants.save(new Grant("grant", "buyer", "video", "refunded", 0, false));
-        mTickets.save(new Ticket("refund-ticket", "buyer", "refunded", "", "REFUND", "Request", "OPEN", "", 1));
+        mTickets.save(new Ticket("refund-ticket", "buyer", "refunded", "", com.pickview.domain.ETicketKind.REFUND, "Request", com.pickview.domain.ETicketStatus.OPEN, "", 1));
         mOperations.resolveTicket(mAdmin, new TicketId("refund-ticket"), "Approved", EApprovalDecision.APPROVE);
         assertFalse(mCommerce.canWatch(new AccountId("buyer"), new ProductId("video")));
         assertEquals(15000, mAdjustments.findById("refunded").orElseThrow().getAmountWon());
@@ -181,7 +181,7 @@ class MarketplaceIntegrationTest {
     @Test
     void refundDebtCarriesForwardWhenNetPayoutIsBelowThreshold() {
         saveHistoricalLine("refunded", 15000, "previous-settlement");
-        mTickets.save(new Ticket("refund-ticket", "buyer", "refunded", "", "REFUND", "Request", "OPEN", "", 1));
+        mTickets.save(new Ticket("refund-ticket", "buyer", "refunded", "", com.pickview.domain.ETicketKind.REFUND, "Request", com.pickview.domain.ETicketStatus.OPEN, "", 1));
         mOperations.resolveTicket(mAdmin, new TicketId("refund-ticket"), "Approved", EApprovalDecision.APPROVE);
         saveHistoricalLine("small", 20000, "");
         assertThrows(ApiFailure.class, () -> mOperations.settle(mAdmin, "seller"));
@@ -200,7 +200,7 @@ class MarketplaceIntegrationTest {
     }
 
     private Account saveAccount(String id, String role) {
-        return mAccounts.save(new Account(id, id + "@test.local", "unused", id, role, "APPROVED", "", "ko", ""));
+        return mAccounts.save(new Account(id, id + "@test.local", "unused", id, com.pickview.domain.ERole.valueOf(role), com.pickview.domain.ESellerStatus.APPROVED, "", "ko", ""));
     }
 
     private void saveHistoricalLine(String id, int amount, String settlement) {
@@ -209,8 +209,8 @@ class MarketplaceIntegrationTest {
                 id + "-purchase",
                 "buyer",
                 id + "-key",
-                "SUCCESS",
-                "CARD",
+                com.pickview.domain.EOrderStatus.SUCCESS,
+                com.pickview.domain.EPaymentChannel.CARD,
                 Instant.parse("2026-08-10T00:00:00Z").toEpochMilli()
             )
         );

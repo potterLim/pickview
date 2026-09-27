@@ -72,8 +72,8 @@ public class AccountService {
                 email.strip().toLowerCase(Locale.ROOT),
                 password.encode(mEncoder),
                 name,
-                "BUYER",
-                "NONE",
+                com.pickview.domain.ERole.BUYER,
+                com.pickview.domain.ESellerStatus.NONE,
                 "",
                 "ko",
                 ""

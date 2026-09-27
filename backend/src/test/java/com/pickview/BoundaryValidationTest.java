@@ -87,7 +87,7 @@ class BoundaryValidationTest {
         MediaStorage storage = mock(MediaStorage.class);
         Account seller = mock(Account.class);
         Product product = mock(Product.class);
-        when(seller.getSellerStatus()).thenReturn("APPROVED");
+        when(seller.getSellerStatus()).thenReturn(com.pickview.domain.ESellerStatus.APPROVED);
         when(catalog.requireOwnedProduct(seller, new ProductId("video"))).thenReturn(product);
         new ThumbnailService(catalog, storage).upload(seller, new ProductId("video"), file);
         assertTrue(isClosed.get());

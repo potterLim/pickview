@@ -65,7 +65,7 @@ public class MediaService {
     public void uploadVideo(Account seller, ProductId productId, MultipartFile file, VideoDuration previewDuration)
         throws Exception {
         Product product = mCatalog.requireOwnedProduct(seller, productId);
-        if (!seller.getSellerStatus().equals("APPROVED") || !product.getKind().equals("VIDEO")) {
+        if (!seller.getSellerStatus().equals(com.pickview.domain.ESellerStatus.APPROVED) || !product.getKind().equals(com.pickview.domain.EProductKind.VIDEO)) {
             throw new ApiFailure(403, "Seller video required");
         }
         if (file.isEmpty() || file.getSize() > MAX_VIDEO_BYTES) {
@@ -156,7 +156,7 @@ public class MediaService {
 
     public Path getPreview(ProductId productId) throws Exception {
         Product product = mCatalog.requireProduct(productId);
-        if (!product.getStatus().equals("APPROVED") || product.isBlocked() || product.getPreviewKey().isBlank()) {
+        if (!product.getStatus().equals(com.pickview.domain.EProductStatus.APPROVED) || product.isBlocked() || product.getPreviewKey().isBlank()) {
             throw new ApiFailure(404, "Preview unavailable");
         }
         return mStorage.getFile(product.getPreviewKey());
@@ -239,7 +239,7 @@ public class MediaService {
     }
 
     private boolean canInspect(Account account, Product product) {
-        return List.of("ADMIN", "CONTENT").contains(account.getRole()) || product.getSellerId().equals(account.getId());
+        return List.of(com.pickview.domain.ERole.ADMIN, com.pickview.domain.ERole.CONTENT).contains(account.getRole()) || product.getSellerId().equals(account.getId());
     }
 
     private static final class PlaybackTicket {

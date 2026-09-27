@@ -1,5 +1,7 @@
 package com.pickview.model;
 
+import com.pickview.domain.ESellerStatus;
+
 import com.pickview.domain.ERole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -52,8 +54,8 @@ public class Account {
         String email,
         String passwordHash,
         String displayName,
-        String role,
-        String sellerStatus,
+        ERole role,
+        ESellerStatus sellerStatus,
         String bio,
         String language,
         String interests
@@ -62,8 +64,8 @@ public class Account {
         mEmail = email;
         mPasswordHash = passwordHash;
         mDisplayName = displayName;
-        mRole = role;
-        mSellerStatus = sellerStatus;
+        mRole = role.name();
+        mSellerStatus = sellerStatus.name();
         mBio = bio;
         mLanguage = language;
         mInterests = interests;
@@ -85,12 +87,12 @@ public class Account {
         return mDisplayName;
     }
 
-    public String getRole() {
-        return mRole;
+    public ERole getRole() {
+        return ERole.valueOf(mRole);
     }
 
-    public String getSellerStatus() {
-        return mSellerStatus;
+    public ESellerStatus getSellerStatus() {
+        return ESellerStatus.valueOf(mSellerStatus);
     }
 
     public String getBio() {
@@ -106,17 +108,17 @@ public class Account {
     }
 
     public void approveSeller() {
-        mSellerStatus = "APPROVED";
+        mSellerStatus = ESellerStatus.APPROVED.name();
     }
 
     public void applySeller(String displayName, String bio) {
         mDisplayName = displayName;
         mBio = bio;
-        mSellerStatus = "PENDING";
+        mSellerStatus = ESellerStatus.PENDING.name();
     }
 
     public void rejectSeller() {
-        mSellerStatus = "REJECTED";
+        mSellerStatus = ESellerStatus.REJECTED.name();
     }
 
     public void changeSettings(String language, String interests) {

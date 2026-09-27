@@ -35,7 +35,7 @@ public class ThumbnailService {
     @Transactional(rollbackFor = Exception.class)
     public void upload(Account account, ProductId productId, MultipartFile file) throws Exception {
         Product product = mCatalog.requireOwnedProduct(account, productId);
-        if (!account.getSellerStatus().equals("APPROVED")) {
+        if (!account.getSellerStatus().equals(com.pickview.domain.ESellerStatus.APPROVED)) {
             throw new ApiFailure(403, "Approved seller required");
         }
         if (file.isEmpty() || file.getSize() > MAX_THUMBNAIL_BYTES) {
@@ -57,7 +57,7 @@ public class ThumbnailService {
     public Path getPublicThumbnail(ProductId id) throws Exception {
         Product product = mCatalog.requireProduct(id);
         if (
-            !product.getStatus().equals("APPROVED") ||
+            !product.getStatus().equals(com.pickview.domain.EProductStatus.APPROVED) ||
             product.isBlocked() ||
             !product.getThumbnail().matches("[a-f0-9-]{36}")
         ) {

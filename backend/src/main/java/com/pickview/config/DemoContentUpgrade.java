@@ -52,14 +52,14 @@ public class DemoContentUpgrade implements CommandLineRunner {
         if (!product.getMediaKey().equals("demo.mp4")) {
             return;
         }
-        String status = product.getStatus();
+        com.pickview.domain.EProductStatus status = product.getStatus();
         product.revise(
             content.path("title").asText(),
             content.path("description").asText(),
             new WonAmount(product.getPriceWon()),
             EAccessTerm.parseDays(product.getTermDays())
         );
-        product.changePresentation(content.path("category").asText(), content.path("thumbnail").asText());
+        product.changePresentation(com.pickview.domain.ECategory.valueOf(content.path("category").asText()), content.path("thumbnail").asText());
         product.changeTags(content.path("tags").asText());
         product.replaceMedia(
             "sample-" + product.getId() + ".mp4",
@@ -67,9 +67,9 @@ public class DemoContentUpgrade implements CommandLineRunner {
             content.path("duration").asDouble()
         );
         switch (status) {
-            case "APPROVED" -> product.publish();
-            case "WITHDRAWN" -> product.withdraw();
-            case "REJECTED" -> product.reject();
+            case APPROVED -> product.publish();
+            case WITHDRAWN -> product.withdraw();
+            case REJECTED -> product.reject();
             default -> product.submit();
         }
     }

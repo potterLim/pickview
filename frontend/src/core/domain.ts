@@ -51,7 +51,7 @@ export enum ETicketKind {
 
 export enum ETicketStatus {
     OPEN = "OPEN",
-    ANSWERED = "ANSWERED",
+    RESOLVED = "RESOLVED",
     APPROVED = "APPROVED",
     REJECTED = "REJECTED",
 }

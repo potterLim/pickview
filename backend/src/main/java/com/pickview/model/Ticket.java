@@ -1,5 +1,9 @@
 package com.pickview.model;
 
+import com.pickview.domain.ETicketStatus;
+
+import com.pickview.domain.ETicketKind;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -51,9 +55,9 @@ public class Ticket {
         String userId,
         String targetId,
         String recipientId,
-        String kind,
+        ETicketKind kind,
         String message,
-        String status,
+        ETicketStatus status,
         String reply,
         long createdAt
     ) {
@@ -61,9 +65,9 @@ public class Ticket {
         mUserId = userId;
         mTargetId = targetId;
         mRecipientId = recipientId;
-        mKind = kind;
+        mKind = kind.name();
         mMessage = message;
-        mStatus = status;
+        mStatus = status.name();
         mReply = reply;
         mCreatedAt = createdAt;
     }
@@ -84,16 +88,16 @@ public class Ticket {
         return mRecipientId;
     }
 
-    public String getKind() {
-        return mKind;
+    public ETicketKind getKind() {
+        return ETicketKind.valueOf(mKind);
     }
 
     public String getMessage() {
         return mMessage;
     }
 
-    public String getStatus() {
-        return mStatus;
+    public ETicketStatus getStatus() {
+        return ETicketStatus.valueOf(mStatus);
     }
 
     public String getReply() {
@@ -104,8 +108,8 @@ public class Ticket {
         return mCreatedAt;
     }
 
-    public void resolve(String reply, String status) {
+    public void resolve(String reply, ETicketStatus status) {
         mReply = reply;
-        mStatus = status;
+        mStatus = status.name();
     }
 }

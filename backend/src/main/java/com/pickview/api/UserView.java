@@ -6,8 +6,8 @@ public record UserView(
     String id,
     String email,
     String displayName,
-    String role,
-    String sellerStatus,
+    com.pickview.domain.ERole role,
+    com.pickview.domain.ESellerStatus sellerStatus,
     String bio,
     String language,
     String interests

@@ -1,5 +1,7 @@
 package com.pickview.model;
 
+import com.pickview.domain.EActivityKind;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -44,7 +46,7 @@ public class Engagement {
         String id,
         String userId,
         String targetId,
-        String kind,
+        EActivityKind kind,
         String content,
         double numberValue,
         long updatedAt
@@ -52,7 +54,7 @@ public class Engagement {
         mId = id;
         mUserId = userId;
         mTargetId = targetId;
-        mKind = kind;
+        mKind = kind.name();
         mContent = content;
         mNumberValue = numberValue;
         mUpdatedAt = updatedAt;
@@ -70,8 +72,8 @@ public class Engagement {
         return mTargetId;
     }
 
-    public String getKind() {
-        return mKind;
+    public EActivityKind getKind() {
+        return EActivityKind.valueOf(mKind);
     }
 
     public String getContent() {

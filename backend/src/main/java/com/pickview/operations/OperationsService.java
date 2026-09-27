@@ -94,7 +94,7 @@ public class OperationsService {
         boolean canReviewContent = hasRole(operator, ERole.CONTENT);
         boolean canHandleSupport = hasRole(operator, ERole.SUPPORT);
         boolean canManageFinance = hasRole(operator, ERole.FINANCE);
-        boolean isAdministrator = operator.getRole().equals("ADMIN");
+        boolean isAdministrator = operator.getRole().equals(com.pickview.domain.ERole.ADMIN);
         return new DashboardView(
             canReviewContent ? mAccounts.findAll().stream().map(UserView::createFromAccount).toList() : List.of(),
             canReviewContent ? mProducts.findAll().stream().map(mCatalog::describeProduct).toList() : List.of(),
@@ -139,6 +139,7 @@ public class OperationsService {
 
     @Transactional
     public void reviewSeller(Account operator, AccountId id, EApprovalDecision decision) {
+        java.util.Objects.requireNonNull(decision, "decision");
         requireRole(operator, ERole.CONTENT);
         Account seller = mAccounts.findById(id.getValue()).orElseThrow(() -> new ApiFailure(404, "Seller not found"));
         if (decision == EApprovalDecision.APPROVE) {
@@ -152,12 +153,13 @@ public class OperationsService {
 
     @Transactional
     public void reviewProduct(Account operator, ProductId id, EProductDecision decision) {
+        java.util.Objects.requireNonNull(decision, "decision");
         requireRole(operator, ERole.CONTENT);
         Product product = mCatalog.requireProduct(id);
-        boolean wasPublished = product.getStatus().equals("APPROVED");
+        boolean wasPublished = product.getStatus().equals(com.pickview.domain.EProductStatus.APPROVED);
         switch (decision) {
             case APPROVE -> {
-                if (product.getKind().equals("VIDEO") && product.getMediaKey().isBlank()) {
+                if (product.getKind().equals(com.pickview.domain.EProductKind.VIDEO) && product.getMediaKey().isBlank()) {
                     throw new ApiFailure(409, "Missing video");
                 }
                 product.publish();
@@ -176,23 +178,24 @@ public class OperationsService {
 
     @Transactional
     public void resolveTicket(Account operator, TicketId id, String reply, EApprovalDecision decision) {
+        java.util.Objects.requireNonNull(decision, "decision");
         Ticket ticket = mEntityManager.find(Ticket.class, id.getValue(), LockModeType.PESSIMISTIC_WRITE);
         if (ticket == null) {
             throw new ApiFailure(404, "Ticket not found");
         }
-        requireRole(operator, ticket.getKind().equals("REPORT") ? ERole.CONTENT : ERole.SUPPORT);
+        requireRole(operator, ticket.getKind().equals(com.pickview.domain.ETicketKind.REPORT) ? ERole.CONTENT : ERole.SUPPORT);
         if (
-            ticket.getKind().equals("INQUIRY") ||
-            !ticket.getStatus().equals("OPEN") ||
+            ticket.getKind().equals(com.pickview.domain.ETicketKind.INQUIRY) ||
+            !ticket.getStatus().equals(com.pickview.domain.ETicketStatus.OPEN) ||
             reply.isBlank() ||
             reply.length() > 4000
         ) {
             throw new ApiFailure(409, "처리할 수 없는 문의입니다. / Ticket cannot be resolved.");
         }
-        if (ticket.getKind().equals("REFUND") && decision == EApprovalDecision.APPROVE) {
+        if (ticket.getKind().equals(com.pickview.domain.ETicketKind.REFUND) && decision == EApprovalDecision.APPROVE) {
             refundLine(new OrderLineId(ticket.getTargetId()));
         }
-        ticket.resolve(reply, decision == EApprovalDecision.APPROVE ? "APPROVED" : "REJECTED");
+        ticket.resolve(reply, decision == EApprovalDecision.APPROVE ? com.pickview.domain.ETicketStatus.APPROVED : com.pickview.domain.ETicketStatus.REJECTED);
         audit(operator, "TICKET_RESOLVED", id.getValue(), reply);
         mCommunity.notifyUser(ticket.getUserId(), "문의 처리 완료 / Your request was resolved");
     }
@@ -284,11 +287,11 @@ public class OperationsService {
     }
 
     private boolean hasRole(Account operator, ERole role) {
-        return operator.getRole().equals("ADMIN") || operator.getRole().equals(role.name());
+        return operator.getRole().equals(com.pickview.domain.ERole.ADMIN) || operator.getRole().equals(role);
     }
 
     private void requireRole(Account operator, ERole... roles) {
-        if (!operator.getRole().equals("ADMIN") && !List.of(roles).contains(ERole.valueOf(operator.getRole()))) {
+        if (!operator.getRole().equals(com.pickview.domain.ERole.ADMIN) && !List.of(roles).contains(operator.getRole())) {
             throw new ApiFailure(403, "권한이 없습니다. / Permission denied.");
         }
     }
@@ -308,8 +311,8 @@ public class OperationsService {
 
     private boolean canReviewTicket(Ticket ticket, boolean canReviewContent, boolean canHandleSupport) {
         return (
-            (canReviewContent && ticket.getKind().equals("REPORT")) ||
-            (canHandleSupport && List.of("SUPPORT", "REFUND").contains(ticket.getKind()))
+            (canReviewContent && ticket.getKind().equals(com.pickview.domain.ETicketKind.REPORT)) ||
+            (canHandleSupport && List.of(com.pickview.domain.ETicketKind.SUPPORT, com.pickview.domain.ETicketKind.REFUND).contains(ticket.getKind()))
         );
     }
 

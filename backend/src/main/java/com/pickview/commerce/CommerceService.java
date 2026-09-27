@@ -100,8 +100,8 @@ public class CommerceService {
                 UUID.randomUUID().toString(),
                 buyer.getId(),
                 request.requestKey(),
-                request.outcome().name(),
-                request.channel().name(),
+                com.pickview.domain.EOrderStatus.valueOf(request.outcome().name()),
+                com.pickview.domain.EPaymentChannel.valueOf(request.channel().name()),
                 System.currentTimeMillis()
             )
         );
@@ -184,7 +184,7 @@ public class CommerceService {
         Set<ProductId> videoIds = new HashSet<>();
         for (Product product : products) {
             if (
-                !product.getStatus().equals("APPROVED") ||
+                !product.getStatus().equals(com.pickview.domain.EProductStatus.APPROVED) ||
                 product.isBlocked() ||
                 product.getSellerId().equals(buyer.getId())
             ) {
@@ -267,8 +267,8 @@ public class CommerceService {
 
     public record OrderView(
         String id,
-        String status,
-        String channel,
+        com.pickview.domain.EOrderStatus status,
+        EPaymentChannel channel,
         long createdAt,
         List<LineView> lines,
         int totalWon

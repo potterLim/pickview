@@ -67,7 +67,7 @@ public class CommunityService {
         return mEngagements
             .findAll()
             .stream()
-            .filter(item -> item.getTargetId().equals(productId) && item.getKind().equals("REVIEW"))
+            .filter(item -> item.getTargetId().equals(productId) && item.getKind().equals(com.pickview.domain.EActivityKind.REVIEW))
             .map(this::describeActivity)
             .toList();
     }
@@ -119,7 +119,7 @@ public class CommunityService {
             .filter(
                 entry ->
                     entry.getUserId().equals(account.getId()) &&
-                    entry.getKind().equals(request.kind().name()) &&
+                    entry.getKind().equals(request.kind()) &&
                     entry.getTargetId().equals(request.targetId())
             )
             .findFirst()
@@ -128,7 +128,7 @@ public class CommunityService {
                     UUID.randomUUID().toString(),
                     account.getId(),
                     request.targetId(),
-                    request.kind().name(),
+                    com.pickview.domain.EActivityKind.valueOf(request.kind().name()),
                     "",
                     0,
                     0
@@ -183,9 +183,9 @@ public class CommunityService {
                     .stream()
                     .anyMatch(
                         ticket ->
-                            ticket.getKind().equals("REFUND") &&
+                            ticket.getKind().equals(com.pickview.domain.ETicketKind.REFUND) &&
                             ticket.getTargetId().equals(line.getId()) &&
-                            ticket.getStatus().equals("OPEN")
+                            ticket.getStatus().equals(com.pickview.domain.ETicketStatus.OPEN)
                     )
             ) {
                 throw new ApiFailure(409, "이미 요청했습니다. / Already requested.");
@@ -197,9 +197,9 @@ public class CommunityService {
                 account.getId(),
                 request.targetId(),
                 recipient,
-                request.kind().name(),
+                com.pickview.domain.ETicketKind.valueOf(request.kind().name()),
                 request.message(),
-                "OPEN",
+                com.pickview.domain.ETicketStatus.OPEN,
                 "",
                 System.currentTimeMillis()
             )
@@ -213,7 +213,7 @@ public class CommunityService {
             .filter(
                 ticket ->
                     ticket.getUserId().equals(userId) ||
-                    (ticket.getKind().equals("INQUIRY") && ticket.getRecipientId().equals(userId))
+                    (ticket.getKind().equals(com.pickview.domain.ETicketKind.INQUIRY) && ticket.getRecipientId().equals(userId))
             )
             .map(this::describeTicket)
             .toList();
@@ -223,7 +223,7 @@ public class CommunityService {
     public void replyToInquiry(String userId, String ticketId, String reply) {
         Ticket ticket = mTickets.findById(ticketId).orElseThrow(() -> new ApiFailure(404, "Ticket not found"));
         if (
-            !ticket.getKind().equals("INQUIRY") ||
+            !ticket.getKind().equals(com.pickview.domain.ETicketKind.INQUIRY) ||
             !ticket.getRecipientId().equals(userId) ||
             reply.isBlank() ||
             reply.length() > 4000
@@ -233,7 +233,7 @@ public class CommunityService {
         if (isBlocked(userId, ticket.getUserId())) {
             throw new ApiFailure(403, "Inquiry blocked");
         }
-        ticket.resolve(reply, "RESOLVED");
+        ticket.resolve(reply, com.pickview.domain.ETicketStatus.RESOLVED);
         notifyUser(ticket.getUserId(), "문의 답변이 도착했습니다. / Your inquiry has a reply.");
     }
 
@@ -263,7 +263,7 @@ public class CommunityService {
         mEngagements
             .findAll()
             .stream()
-            .filter(item -> item.getKind().equals("NOTIFY") && item.getTargetId().equals(product.getSellerId()))
+            .filter(item -> item.getKind().equals(com.pickview.domain.EActivityKind.NOTIFY) && item.getTargetId().equals(product.getSellerId()))
             .filter(item -> !isBlocked(item.getUserId(), product.getSellerId()))
             .forEach(item -> notifyUser(item.getUserId(), "새 영상 / New video: " + product.getTitle()));
     }
@@ -274,7 +274,7 @@ public class CommunityService {
             .stream()
             .anyMatch(
                 item ->
-                    item.getKind().equals("BLOCK") &&
+                    item.getKind().equals(com.pickview.domain.EActivityKind.BLOCK) &&
                     ((item.getUserId().equals(first) && item.getTargetId().equals(second)) ||
                         (item.getUserId().equals(second) && item.getTargetId().equals(first)))
             );
@@ -316,7 +316,7 @@ public class CommunityService {
     public record EngagementView(
         String id,
         String targetId,
-        String kind,
+        EActivityKind kind,
         String content,
         double numberValue,
         String author
@@ -329,9 +329,9 @@ public class CommunityService {
         String userId,
         String targetId,
         String recipientId,
-        String kind,
+        ETicketKind kind,
         String message,
-        String status,
+        com.pickview.domain.ETicketStatus status,
         String reply,
         long createdAt
     ) {}

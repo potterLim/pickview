@@ -1,5 +1,11 @@
 package com.pickview.model;
 
+import com.pickview.domain.EProductKind;
+
+import com.pickview.domain.EProductStatus;
+
+import com.pickview.domain.ECategory;
+
 import com.pickview.domain.EAccessTerm;
 import com.pickview.domain.WonAmount;
 import jakarta.persistence.Column;
@@ -77,15 +83,15 @@ public class Product {
         String sellerId,
         String title,
         String description,
-        String category,
+        ECategory category,
         int priceWon,
         int termDays,
-        String status,
+        EProductStatus status,
         String thumbnail,
         String mediaKey,
         String previewKey,
         double durationSeconds,
-        String kind,
+        EProductKind kind,
         String bundleIds,
         boolean blocked,
         long createdAt
@@ -94,15 +100,15 @@ public class Product {
         mSellerId = sellerId;
         mTitle = title;
         mDescription = description;
-        mCategory = category;
+        mCategory = category.name();
         mPriceWon = priceWon;
         mTermDays = termDays;
-        mStatus = status;
+        mStatus = status.name();
         mThumbnail = thumbnail;
         mMediaKey = mediaKey;
         mPreviewKey = previewKey;
         mDurationSeconds = durationSeconds;
-        mKind = kind;
+        mKind = kind.name();
         mBundleIds = bundleIds;
         mIsBlocked = blocked;
         mCreatedAt = createdAt;
@@ -124,8 +130,8 @@ public class Product {
         return mDescription;
     }
 
-    public String getCategory() {
-        return mCategory;
+    public ECategory getCategory() {
+        return ECategory.valueOf(mCategory);
     }
 
     public int getPriceWon() {
@@ -136,8 +142,8 @@ public class Product {
         return mTermDays;
     }
 
-    public String getStatus() {
-        return mStatus;
+    public EProductStatus getStatus() {
+        return EProductStatus.valueOf(mStatus);
     }
 
     public String getThumbnail() {
@@ -164,8 +170,8 @@ public class Product {
         return mDurationSeconds;
     }
 
-    public String getKind() {
-        return mKind;
+    public EProductKind getKind() {
+        return EProductKind.valueOf(mKind);
     }
 
     public String getBundleIds() {
@@ -181,19 +187,19 @@ public class Product {
     }
 
     public void publish() {
-        mStatus = "APPROVED";
+        mStatus = EProductStatus.APPROVED.name();
     }
 
     public void reject() {
-        mStatus = "REJECTED";
+        mStatus = EProductStatus.REJECTED.name();
     }
 
     public void withdraw() {
-        mStatus = "WITHDRAWN";
+        mStatus = EProductStatus.WITHDRAWN.name();
     }
 
     public void submit() {
-        mStatus = "PENDING";
+        mStatus = EProductStatus.PENDING.name();
     }
 
     public void block() {
@@ -207,8 +213,8 @@ public class Product {
         mTermDays = term.getDays();
     }
 
-    public void changePresentation(String category, String thumbnail) {
-        mCategory = category;
+    public void changePresentation(ECategory category, String thumbnail) {
+        mCategory = category.name();
         mThumbnail = thumbnail;
     }
 
@@ -216,6 +222,6 @@ public class Product {
         mMediaKey = mediaKey;
         mPreviewKey = previewKey;
         mDurationSeconds = durationSeconds;
-        mStatus = "PENDING";
+        mStatus = EProductStatus.PENDING.name();
     }
 }

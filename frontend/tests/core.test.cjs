@@ -46,6 +46,10 @@ test("API rejects malformed contracts and retains status for null error bodies",
     assert.throws(() => contracts.decodeProduct({ ...product(), id: 17 }));
     assert.throws(() => contracts.decodeProduct({ ...product(), kind: "UNKNOWN" }));
     assert.equal(contracts.decodeProduct(product()).id, "video");
+    assert.equal(contracts.decodeTicket({
+        id: "ticket", userId: "buyer", targetId: "video", recipientId: "seller", kind: "INQUIRY",
+        message: "Question", status: "RESOLVED", reply: "Answer", createdAt: 1,
+    }).status, "RESOLVED");
 });
 
 test("logout clears private state even when persistent storage fails", async () => {
