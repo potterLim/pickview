@@ -88,6 +88,16 @@ async function checkOverflow(page, width, height) {
         await checkOverflow(page, 1440, 1000);
         await page.getByRole("button", { name: "Settings", exact: true }).click();
         await page.getByRole("radio", { name: "한국어", exact: true }).click();
+        await page.getByRole("checkbox", { name: "코미디", exact: true }).click();
+        await page.getByRole("button", { name: "설정 저장", exact: true }).click();
+        await page.getByText("설정을 저장했어요.", { exact: true }).waitFor();
+        assert.equal(await page.getByRole("button", { name: "설정 저장", exact: true }).isDisabled(), true);
+        await page.getByRole("button", { name: "탐색", exact: true }).click();
+        await page.getByRole("button", { name: "설정", exact: true }).click();
+        assert.equal(
+            await page.getByRole("checkbox", { name: "코미디", exact: true }).getAttribute("aria-checked"),
+            "true",
+        );
         await page.getByRole("button", { name: "로그아웃", exact: true }).click();
         await login(page, "admin@pickview.demo");
         await page.getByRole("button", { name: "운영 관리", exact: true }).click();

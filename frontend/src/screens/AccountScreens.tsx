@@ -400,7 +400,6 @@ export function SettingsScreen(): JSX.Element {
     const [saved, setSaved] = useState(false);
     useEffect(() => {
         setInterests(user?.interests ?? "");
-        setSaved(false);
     }, [user?.id, user?.interests]);
     const dirty = interests !== (user?.interests ?? "") || language !== user?.language;
     function toggleInterest(value: string) {
