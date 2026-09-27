@@ -417,7 +417,11 @@ export function OrdersScreen(): JSX.Element {
                                     {t("데모 결제", "Demo payment")}
                                 </Text>
                             </View>
-                            <Text style={styles.badge}>{statusLabel(order.status, language)}</Text>
+                            <Text style={styles.badge}>
+                                {order.status === "SUCCESS" && order.lines.some((line) => line.refunded)
+                                    ? t("일부 환불", "Partially refunded")
+                                    : statusLabel(order.status, language)}
+                            </Text>
                         </View>
                         {order.lines.map((line) => {
                             const pending = tickets.some(
@@ -519,16 +523,39 @@ export function OrdersScreen(): JSX.Element {
                                 </View>
                             );
                         })}
-                        <View style={[styles.between, { paddingTop: 16, borderTopWidth: 1, borderColor: colors.line }]}>
-                            <Text style={styles.muted}>
-                                {order.status === "SUCCESS"
-                                    ? t("주문 당시 결제 금액", "Original order total")
-                                    : t("결제되지 않았습니다", "No payment was made")}
-                            </Text>
-                            <Text style={styles.sectionTitle}>{money(order.totalWon)}</Text>
-                        </View>
+                        <OrderPaymentSummary order={order} />
                     </View>
                 ))}
+        </View>
+    );
+}
+
+function OrderPaymentSummary({ order }: { order: IOrder }): JSX.Element {
+    const { t } = useStore();
+    const wasPaid = order.status === "SUCCESS" || order.status === "REFUNDED";
+    const refundedLines = order.lines.filter((line) => line.refunded);
+    const refundedWon = refundedLines.reduce((total, line) => total + line.priceWon, 0);
+    return (
+        <View style={{ gap: 12, paddingTop: 16, borderTopWidth: 1, borderColor: colors.line }}>
+            <View style={styles.between}>
+                <Text style={styles.muted}>
+                    {wasPaid ? t("주문 당시 결제 금액", "Original payment amount") : t("결제된 금액", "Amount paid")}
+                </Text>
+                <Text style={styles.sectionTitle}>{money(wasPaid ? order.totalWon : 0)}</Text>
+            </View>
+            {wasPaid && refundedLines.length > 0 ? (
+                <View style={styles.between}>
+                    <Text style={styles.muted}>{t("환불 완료 금액", "Refunded amount")}</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.violet }]}>{money(refundedWon)}</Text>
+                </View>
+            ) : null}
+            {!wasPaid ? (
+                <Text style={styles.muted}>
+                    {order.status === "FAILED"
+                        ? t("결제에 실패하여 결제된 금액이 없습니다.", "Payment failed. No payment was made.")
+                        : t("결제가 취소되어 결제된 금액이 없습니다.", "Payment was canceled. No payment was made.")}
+                </Text>
+            ) : null}
         </View>
     );
 }
