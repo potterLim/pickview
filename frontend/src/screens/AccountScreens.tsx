@@ -140,10 +140,7 @@ export function InboxScreen(): JSX.Element {
             <View style={{ gap: 8 }}>
                 <Text style={styles.title}>{t("문의와 알림", "Inbox & notifications")}</Text>
                 <Text style={styles.subtitle}>
-                    {t(
-                        "궁금한 점과 새로운 소식, 한곳에서 확인하세요.",
-                        "Your conversations and updates, all in one place.",
-                    )}
+                    {t("궁금한 점과 새로운 소식, 한곳에서 확인하세요.", "Your conversations and updates, all in one place.")}
                 </Text>
             </View>
             <View
@@ -180,10 +177,7 @@ export function InboxScreen(): JSX.Element {
                     <View style={{ gap: 5 }}>
                         <Text style={styles.sectionTitle}>{t("무엇을 도와드릴까요?", "How can we help?")}</Text>
                         <Text style={styles.muted}>
-                            {t(
-                                "답변은 이 문의함에 남겨드려요. 비밀번호나 결제 정보는 적지 마세요.",
-                                "We'll reply here. Please leave out passwords and payment details.",
-                            )}
+                            {t("답변은 이 문의함에 남겨드려요. 비밀번호나 결제 정보는 적지 마세요.", "We'll reply here. Please leave out passwords and payment details.")}
                         </Text>
                     </View>
                     <Field
@@ -200,10 +194,7 @@ export function InboxScreen(): JSX.Element {
                     <View style={styles.actionRow}>
                         <Text accessibilityLiveRegion="polite" style={[styles.muted, { flex: 1 }]}>
                             {sent
-                                ? t(
-                                      "문의를 보냈어요. 아래에서 진행 상황을 확인하세요.",
-                                      "Message sent. Track your conversation below.",
-                                  )
+                                ? t("문의를 보냈어요. 아래에서 진행 상황을 확인하세요.", "Message sent. Track your conversation below.")
                                 : `${message.length.toLocaleString()} / 2,000`}
                         </Text>
                         <Button
@@ -230,8 +221,7 @@ export function InboxScreen(): JSX.Element {
                 <Loading />
             ) : tab === "tickets" ? (
                 tickets.length ? (
-                    tickets
-                        .slice()
+                    tickets.slice()
                         .sort((a, b) => b.createdAt - a.createdAt)
                         .map((ticket) => (
                             <TicketConversation
@@ -245,16 +235,12 @@ export function InboxScreen(): JSX.Element {
                     <InboxEmpty
                         icon="chatbubble-ellipses-outline"
                         title={t("아직 나눈 이야기가 없어요", "No conversations yet")}
-                        description={t(
-                            "문의가 생기면 편하게 남겨주세요. 이곳에 차곡차곡 모아둘게요.",
-                            "Send us a question whenever you need. Your conversations will appear here.",
-                        )}
+                        description={t("문의가 생기면 편하게 남겨주세요. 이곳에 차곡차곡 모아둘게요.", "Send us a question whenever you need. Your conversations will appear here.")}
                     />
                 )
             ) : notices.length ? (
                 <View style={styles.panel}>
-                    {notices
-                        .slice()
+                    {notices.slice()
                         .sort((a, b) => b.createdAt - a.createdAt)
                         .map((notice, index) => (
                             <View
@@ -306,10 +292,7 @@ export function InboxScreen(): JSX.Element {
                 <InboxEmpty
                     icon="notifications-outline"
                     title={t("새로운 소식이 오면 알려드릴게요", "You're all caught up")}
-                    description={t(
-                        "구매와 팔로우한 크리에이터의 소식을 여기서 확인할 수 있어요.",
-                        "Purchase updates and news from creators you follow will appear here.",
-                    )}
+                    description={t("구매와 팔로우한 크리에이터의 소식을 여기서 확인할 수 있어요.", "Purchase updates and news from creators you follow will appear here.")}
                 />
             )}
         </View>
@@ -475,10 +458,7 @@ export function SettingsScreen(): JSX.Element {
                 <View style={{ gap: 8 }}>
                     <Text style={styles.sectionTitle}>{t("관심 분야", "Interests")}</Text>
                     <Text style={styles.muted}>
-                        {t(
-                            "좋아하는 주제를 골라주세요. 여러 개를 선택할 수 있어요.",
-                            "Choose the topics you enjoy. Pick as many as you like.",
-                        )}
+                        {t("좋아하는 주제를 골라주세요. 여러 개를 선택할 수 있어요.", "Choose the topics you enjoy. Pick as many as you like.")}
                     </Text>
                     <View style={[styles.row, { marginTop: 8 }]}>
                         {[

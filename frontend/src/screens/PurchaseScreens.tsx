@@ -19,9 +19,7 @@ export function CartScreen(): JSX.Element {
     const [showScenarios, setShowScenarios] = useState(false);
     const [result, setResult] = useState<IOrder | null>(null);
     const requestKey = useRef({ fingerprint: "", key: "" });
-    const cart = products.filter((product) =>
-        activity.some((item) => item.kind === "CART" && item.targetId === product.id),
-    );
+    const cart = products.filter((product) => activity.some((item) => item.kind === "CART" && item.targetId === product.id));
     const total = cart.reduce((amount, product) => amount + product.priceWon, 0);
     async function checkout() {
         const productIds = cart.map((product) => product.id).sort();
@@ -52,10 +50,7 @@ export function CartScreen(): JSX.Element {
                     {t("좋은 선택이에요. 이제 만나볼까요?", "Great choice. Make yourself comfortable.")}
                 </Text>
                 <Text style={[styles.subtitle, { textAlign: "center" }]}>
-                    {t(
-                        "구매한 영상을 라이브러리에 담았어요. 실제로 청구된 금액은 없습니다.",
-                        "Your videos are in your library. No real money was charged.",
-                    )}
+                    {t("구매한 영상을 라이브러리에 담았어요. 실제로 청구된 금액은 없습니다.", "Your videos are in your library. No real money was charged.")}
                 </Text>
                 <View style={styles.panel}>
                     {result.lines.map((line) => (
@@ -90,10 +85,7 @@ export function CartScreen(): JSX.Element {
         <View style={styles.page}>
             <Text style={styles.title}>{t("좋아하는 영상이 기다리고 있어요.", "Your next discovery is waiting.")}</Text>
             <Text style={styles.subtitle}>
-                {t(
-                    "구독 없이, 마음에 드는 영상만. 구매 후 라이브러리에서 만나요.",
-                    "Just the videos you want. Ready in your library after purchase.",
-                )}
+                {t("구독 없이, 마음에 드는 영상만. 구매 후 라이브러리에서 만나요.", "Just the videos you want. Ready in your library after purchase.")}
             </Text>
             {!cart.length ? (
                 <>
@@ -172,10 +164,7 @@ export function CartScreen(): JSX.Element {
                                     {t("안심하고 체험하는 데모 결제", "A checkout you can safely try")}
                                 </Text>
                                 <Text style={styles.muted}>
-                                    {t(
-                                        "실제 결제나 카드 정보 입력 없이 구매 과정을 체험합니다.",
-                                        "Try the purchase flow without card details or real charges.",
-                                    )}
+                                    {t("실제 결제나 카드 정보 입력 없이 구매 과정을 체험합니다.", "Try the purchase flow without card details or real charges.")}
                                 </Text>
                             </View>
                             <Button
@@ -230,10 +219,7 @@ export function CartScreen(): JSX.Element {
                                     )}
                                 </Text>
                                 <Text style={styles.muted}>
-                                    {t(
-                                        "결제되지 않았어요. 장바구니는 그대로 유지됩니다. 정상 결제로 바꾸고 다시 시도해보세요.",
-                                        "No charge was made. Your cart is saved. Select Success to try again.",
-                                    )}
+                                    {t("결제되지 않았어요. 장바구니는 그대로 유지됩니다. 정상 결제로 바꾸고 다시 시도해보세요.", "No charge was made. Your cart is saved. Select Success to try again.")}
                                 </Text>
                             </View>
                         ) : null}
@@ -279,11 +265,7 @@ export function LibraryScreen(): JSX.Element {
                                   : t("기간 제한 없음", "Unlimited")}
                         </Text>
                         <WatchProgress
-                            seconds={
-                                activity.find(
-                                    (entry) => entry.kind === "PROGRESS" && entry.targetId === item.product.id,
-                                )?.numberValue ?? 0
-                            }
+                            seconds={activity.find((entry) => entry.kind === "PROGRESS" && entry.targetId === item.product.id)?.numberValue ?? 0}
                             duration={item.product.durationSeconds}
                         />
                     </View>
@@ -363,12 +345,7 @@ export function OrdersScreen(): JSX.Element {
         setSelectedLine("");
         setReason("");
         setTickets(await read(decodeArray(decodeTicket), "/tickets", token));
-        notify(
-            t(
-                "환불 요청을 접수했어요. 문의함에서 처리 상태를 확인할 수 있습니다.",
-                "Refund request received. Track its status in your inbox.",
-            ),
-        );
+        notify(t("환불 요청을 접수했어요. 문의함에서 처리 상태를 확인할 수 있습니다.", "Refund request received. Track its status in your inbox."));
     }
     return (
         <View style={[styles.page, { maxWidth: 980, width: "100%" }]}>
@@ -393,14 +370,10 @@ export function OrdersScreen(): JSX.Element {
             ) : !orders.length ? (
                 <Empty
                     title={t("아직 주문이 없어요.", "No orders yet.")}
-                    description={t(
-                        "마음에 드는 영상을 구매하면 이곳에 모아드릴게요.",
-                        "Your purchases will appear here.",
-                    )}
+                    description={t("마음에 드는 영상을 구매하면 이곳에 모아드릴게요.", "Your purchases will appear here.")}
                 />
             ) : null}
-            {orders
-                .slice()
+            {orders.slice()
                 .sort((a, b) => b.createdAt - a.createdAt)
                 .map((order) => (
                     <View key={order.id} style={[styles.panel, { gap: 20 }]}>
@@ -483,18 +456,12 @@ export function OrdersScreen(): JSX.Element {
                                                     {t("환불을 요청하시겠어요?", "Request a refund?")}
                                                 </Text>
                                                 <Text style={styles.muted}>
-                                                    {t(
-                                                        "이 상품의 환불 사유를 알려주세요. 요청을 제출하면 운영자가 검토하며, 즉시 환불되지는 않습니다.",
-                                                        "Tell us why you'd like a refund for this item. Your request will be reviewed; submitting it does not issue an immediate refund.",
-                                                    )}
+                                                    {t("이 상품의 환불 사유를 알려주세요. 요청을 제출하면 운영자가 검토하며, 즉시 환불되지는 않습니다.", "Tell us why you'd like a refund for this item. Your request will be reviewed; submitting it does not issue an immediate refund.")}
                                                 </Text>
                                             </View>
                                             <Field
                                                 label={t("환불 요청 사유", "Refund reason")}
-                                                placeholder={t(
-                                                    "환불을 요청하는 이유를 적어주세요.",
-                                                    "Tell us why you'd like a refund.",
-                                                )}
+                                                placeholder={t("환불을 요청하는 이유를 적어주세요.", "Tell us why you'd like a refund.")}
                                                 value={reason}
                                                 onChangeText={setReason}
                                                 multiline

@@ -147,10 +147,7 @@ export function AdminScreen(): JSX.Element {
                 <View style={styles.panel}>
                     <Text style={styles.heading}>{t("모의 정산", "Mock settlements")}</Text>
                     <Text style={styles.subtitle}>
-                        {t(
-                            "전월 실적 · 매월 15일부터 · 1만원 미만 이월",
-                            "Prior month · From the 15th · KRW 10,000 minimum",
-                        )}
+                        {t("전월 실적 · 매월 15일부터 · 1만원 미만 이월", "Prior month · From the 15th · KRW 10,000 minimum")}
                     </Text>
                     <Text style={styles.text}>
                         {t("미환불 판매자 몫", "Unrefunded seller share")}:{" "}
@@ -201,9 +198,7 @@ export function AdminScreen(): JSX.Element {
                         ))}
                     </View>
                     <Text style={styles.heading}>{t("운영 기록", "Audit log")}</Text>
-                    {dashboard.audits
-                        .slice()
-                        .reverse()
+                    {dashboard.audits.slice().reverse()
                         .map((audit) => (
                             <Text key={audit.id} style={styles.muted}>
                                 {new Date(audit.createdAt).toLocaleString()} · {audit.actorId} · {audit.action} ·{" "}

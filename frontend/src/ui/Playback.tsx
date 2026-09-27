@@ -25,9 +25,7 @@ export function Playback({
     const [ended, setEnded] = useState(false);
     const [status, setStatus] = useState("loading");
     const [saveFailed, setSaveFailed] = useState(false);
-    const resumeAt = useRef(
-        activity.find((item) => item.kind === "PROGRESS" && item.targetId === product.id)?.numberValue ?? 0,
-    );
+    const resumeAt = useRef(activity.find((item) => item.kind === "PROGRESS" && item.targetId === product.id)?.numberValue ?? 0);
     const player = useVideoPlayer(uri, (instance) => {
         instance.timeUpdateEventInterval = 2;
         instance.muted = true;
@@ -112,17 +110,13 @@ export function Playback({
             {status === "error" ? (
                 <View style={styles.panel}>
                     <Text style={styles.text}>
-                        {t(
-                            "영상을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.",
-                            "The video couldn't load. Check your connection and try again.",
-                        )}
+                        {t("영상을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.", "The video couldn't load. Check your connection and try again.")}
                     </Text>
                     <Button
                         secondary
                         label={t("다시 시도", "Try again")}
                         onPress={() => {
-                            void player
-                                .replaceAsync(uri)
+                            void player.replaceAsync(uri)
                                 .then(() => player.play())
                                 .catch(() => setStatus("error"));
                         }}
@@ -171,14 +165,8 @@ export function Playback({
                     </Text>
                     <Text style={styles.subtitle}>
                         {full
-                            ? t(
-                                  "아래에서 감상을 남기거나 다시 시청해 보세요.",
-                                  "Leave your thoughts below, or watch it again.",
-                              )
-                            : t(
-                                  "마음에 들었다면, 전체 영상을 나의 라이브러리에 담아보세요.",
-                                  "Enjoy the full video in your own library.",
-                              )}
+                            ? t("아래에서 감상을 남기거나 다시 시청해 보세요.", "Leave your thoughts below, or watch it again.")
+                            : t("마음에 들었다면, 전체 영상을 나의 라이브러리에 담아보세요.", "Enjoy the full video in your own library.")}
                     </Text>
                     <View style={styles.row}>
                         <Button

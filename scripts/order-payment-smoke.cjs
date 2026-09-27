@@ -20,8 +20,7 @@ async function call(path, token, body) {
 }
 
 function orderCard(page, order) {
-    return page
-        .locator("div")
+    return page.locator("div")
         .filter({ has: page.getByText(new RegExp(`주문 ${order.id.slice(0, 8)} ·`)) })
         .filter({ has: page.getByText("주문 당시 결제 금액", { exact: true }) })
         .last();
@@ -104,9 +103,7 @@ async function reloadOrders(page) {
         await page.getByText("Payment failed. No payment was made.", { exact: true }).waitFor();
         await page.getByText("Payment was canceled. No payment was made.", { exact: true }).waitFor();
         assert.deepEqual(errors, []);
-        console.log(
-            "PASS failed/canceled/successful payments, partial/full refunds, retained original totals, Korean/English and responsive order summaries",
-        );
+        console.log("PASS failed/canceled/successful payments, partial/full refunds, retained original totals, Korean/English and responsive order summaries");
     } finally {
         await browser.close();
     }

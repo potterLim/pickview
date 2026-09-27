@@ -42,7 +42,5 @@ export function CreatorIdentity({
         <Pressable accessibilityRole="button" accessibilityLabel={name} onPress={onPress}>
             {content}
         </Pressable>
-    ) : (
-        content
-    );
+    ) : content;
 }

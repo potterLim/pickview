@@ -83,14 +83,7 @@ export function AuthScreen(): JSX.Element {
                         key={provider}
                         secondary
                         label={`${provider} (${t("모의", "mock")})`}
-                        onPress={() =>
-                            notify(
-                                t(
-                                    "소셜 인증 연결 전입니다. 위 데모 계정으로 로그인하세요.",
-                                    "Use a demo account above; social authentication is not connected.",
-                                ),
-                            )
-                        }
+                        onPress={() => notify(t("소셜 인증 연결 전입니다. 위 데모 계정으로 로그인하세요.", "Use a demo account above; social authentication is not connected."))}
                     />
                 ))}
             </View>

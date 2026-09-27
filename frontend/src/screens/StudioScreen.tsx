@@ -69,10 +69,7 @@ export function StudioScreen(): JSX.Element {
                 <View style={{ gap: 8 }}>
                     <Text style={styles.title}>{t("나의 영상을 세상에", "Share what you know")}</Text>
                     <Text style={styles.subtitle}>
-                        {t(
-                            "작은 경험도 누군가에게는 새로운 발견이 됩니다.",
-                            "Your everyday experience could be someone's next discovery.",
-                        )}
+                        {t("작은 경험도 누군가에게는 새로운 발견이 됩니다.", "Your everyday experience could be someone's next discovery.")}
                     </Text>
                 </View>
                 <View style={[styles.row, { gap: 20, paddingVertical: 6 }]}>
@@ -148,14 +145,8 @@ export function StudioScreen(): JSX.Element {
                     <View style={[styles.actionRow, { paddingTop: 20, borderTopWidth: 1, borderColor: colors.line }]}>
                         <Text style={[styles.muted, { flex: 1, minWidth: 160 }]}>
                             {pending
-                                ? t(
-                                      "신청을 검토하고 있어요. 승인 후 영상을 등록할 수 있습니다.",
-                                      "Your application is in review. You can publish once approved.",
-                                  )
-                                : t(
-                                      "신청이 승인되면 영상 판매를 시작할 수 있어요.",
-                                      "Start selling videos once your application is approved.",
-                                  )}
+                                ? t("신청을 검토하고 있어요. 승인 후 영상을 등록할 수 있습니다.", "Your application is in review. You can publish once approved.")
+                                : t("신청이 승인되면 영상 판매를 시작할 수 있어요.", "Start selling videos once your application is approved.")}
                         </Text>
                         <Button
                             loading={busy}
@@ -209,10 +200,7 @@ export function StudioScreen(): JSX.Element {
                 ))}
             </View>
             <Text style={styles.muted}>
-                {t(
-                    "모의 결제 경로 비용 3% · 잔액에서 플랫폼 15% / 판매자 85%. 실제 계약 요율이 아닙니다.",
-                    "Simulated 3% channel fee, then 15% platform / 85% seller. Not contractual rates.",
-                )}
+                {t("모의 결제 경로 비용 3% · 잔액에서 플랫폼 15% / 판매자 85%. 실제 계약 요율이 아닙니다.", "Simulated 3% channel fee, then 15% platform / 85% seller. Not contractual rates.")}
             </Text>
             <View style={styles.panel}>
                 <View style={styles.between}>
@@ -492,10 +480,7 @@ function ProductEditor({
             ) : (
                 <>
                     <Text style={styles.muted}>
-                        {t(
-                            "MP4 H.264/AAC · 1080p · 최대 100MB / 10분",
-                            "MP4 H.264/AAC · 1080p · Max 100MB / 10 minutes",
-                        )}
+                        {t("MP4 H.264/AAC · 1080p · 최대 100MB / 10분", "MP4 H.264/AAC · 1080p · Max 100MB / 10 minutes")}
                     </Text>
                     <Button
                         secondary

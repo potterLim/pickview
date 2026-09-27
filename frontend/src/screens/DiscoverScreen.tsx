@@ -59,10 +59,7 @@ export function DiscoverScreen(): JSX.Element {
             <View style={{ gap: 10 }}>
                 <Text style={[styles.title, { fontSize: width < 600 ? 27 : 36 }]}>{title}</Text>
                 <Text style={styles.subtitle}>
-                    {t(
-                        "좋은 크리에이터의 영상을 필요한 순간에, 지금 바로.",
-                        "Thoughtful videos from creators you love. Yours when you need them.",
-                    )}
+                    {t("좋은 크리에이터의 영상을 필요한 순간에, 지금 바로.", "Thoughtful videos from creators you love. Yours when you need them.")}
                 </Text>
             </View>
             <TextInput
@@ -129,10 +126,7 @@ export function DiscoverScreen(): JSX.Element {
                             maxWidth: width < 600 ? "100%" : "55%",
                         }}
                     >
-                        {t(
-                            "좋은 영상을 만나는 것이\n더 나은 하루를 만듭니다.",
-                            "A little curiosity.\nA brighter everyday.",
-                        )}
+                        {t("좋은 영상을 만나는 것이\n더 나은 하루를 만듭니다.", "A little curiosity.\nA brighter everyday.")}
                     </Text>
                 </ImageBackground>
             ) : null}
@@ -184,10 +178,7 @@ export function DiscoverScreen(): JSX.Element {
                     }
                     description={
                         hasFilters
-                            ? t(
-                                  "다른 검색어를 입력하거나 검색 조건을 초기화해보세요.",
-                                  "Try another search or clear your filters.",
-                              )
+                            ? t("다른 검색어를 입력하거나 검색 조건을 초기화해보세요.", "Try another search or clear your filters.")
                             : undefined
                     }
                     actionLabel={hasFilters ? t("검색 조건 초기화", "Clear filters") : undefined}
@@ -196,10 +187,7 @@ export function DiscoverScreen(): JSX.Element {
             ) : null}
             <View style={[styles.between, { paddingTop: 24, borderTopWidth: 1, borderColor: colors.line }]}>
                 <Text style={styles.muted}>
-                    {t(
-                        "PickView 데모 · 상품과 영상은 시연용 샘플입니다.",
-                        "PickView demo · Products and clips are demonstration samples.",
-                    )}
+                    {t("PickView 데모 · 상품과 영상은 시연용 샘플입니다.", "PickView demo · Products and clips are demonstration samples.")}
                 </Text>
                 <Button
                     secondary

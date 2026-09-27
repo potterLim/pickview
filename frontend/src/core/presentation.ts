@@ -43,9 +43,5 @@ export function statusLabel(status: string, language: Language): string {
 }
 
 export function durationLabel(seconds: number): string {
-    return `${Math.floor(seconds / 60)
-        .toString()
-        .padStart(2, "0")}:${Math.floor(seconds % 60)
-        .toString()
-        .padStart(2, "0")}`;
+    return `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${Math.floor(seconds % 60).toString().padStart(2, "0")}`;
 }

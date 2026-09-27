@@ -110,9 +110,7 @@ async function checkOverflow(page, width, height) {
         await page.waitForFunction(() => document.querySelector("video")?.currentTime > 1);
         await page.screenshot({ path: resolve(output, "moderation.png") });
         assert.deepEqual(errors, []);
-        console.log(
-            "PASS browser registration, cart, purchase, explicit refund request, playback, seek, speed, locale, responsive layout, account switch and moderation",
-        );
+        console.log("PASS browser registration, cart, purchase, explicit refund request, playback, seek, speed, locale, responsive layout, account switch and moderation");
     } finally {
         await browser.close();
     }

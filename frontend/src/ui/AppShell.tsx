@@ -20,8 +20,7 @@ const navigation: { route: Route; ko: string; en: string; icon: ComponentProps<t
 
 export function AppShell({ children }: { children: ReactNode }): JSX.Element {
     const { width } = useWindowDimensions();
-    const { t, route, navigate, language, setLanguage, user, activity, message, busy, products, selected, notify } =
-        useStore();
+    const { t, route, navigate, language, setLanguage, user, activity, message, busy, products, selected, notify } = useStore();
     const mobile = width < 850;
     const cartCount = activity.filter((item) => item.kind === "CART").length;
     useEffect(() => {

@@ -342,10 +342,7 @@ export function DetailScreen(): JSX.Element | null {
                     {product.kind === "BUNDLE" ? <BundleContents ids={product.videoIds} /> : null}
                     {content ? (
                         <Text style={styles.muted}>
-                            {t(
-                                "스튜디오 온 · 데모를 위해 제작한 사진·모션 그래픽 영상 · 한국어 자막과 배경음",
-                                "Studio On · Original photo and motion-graphics demo · Korean text and ambient audio",
-                            )}
+                            {t("스튜디오 온 · 데모를 위해 제작한 사진·모션 그래픽 영상 · 한국어 자막과 배경음", "Studio On · Original photo and motion-graphics demo · Korean text and ambient audio")}
                         </Text>
                     ) : null}
                 </View>
@@ -367,10 +364,7 @@ export function DetailScreen(): JSX.Element | null {
                             <Ionicons name="chatbubble-ellipses-outline" color={colors.muted} size={30} />
                             <View style={{ flex: 1, gap: 4 }}>
                                 <Text style={styles.text}>
-                                    {t(
-                                        "첫 번째 감상을 기다리고 있어요.",
-                                        "Your first impression could be the first review.",
-                                    )}
+                                    {t("첫 번째 감상을 기다리고 있어요.", "Your first impression could be the first review.")}
                                 </Text>
                                 <Text style={styles.muted}>
                                     {t("이 영상의 좋았던 순간을 나눠 주세요.", "Tell us about a moment you enjoyed.")}
@@ -467,12 +461,7 @@ export function DetailScreen(): JSX.Element | null {
                                 });
                                 setInquiry("");
                                 setContact("");
-                                notify(
-                                    t(
-                                        "접수했어요. 문의함에서 답변을 확인하세요.",
-                                        "Sent. Look out for a reply in your inbox.",
-                                    ),
-                                );
+                                notify(t("접수했어요. 문의함에서 답변을 확인하세요.", "Sent. Look out for a reply in your inbox."));
                             })
                         }
                     />
@@ -488,8 +477,7 @@ function BundleContents({ ids }: { ids: string[] }) {
         <View style={{ gap: 16 }}>
             <Text style={styles.heading}>{t("함께 담긴 영상", "Included in this collection")}</Text>
             {ids.map((id) => {
-                const product =
-                    products.find((item) => item.id === id) ?? library.find((item) => item.product.id === id)?.product;
+                const product = products.find((item) => item.id === id) ?? library.find((item) => item.product.id === id)?.product;
                 return product ? (
                     <Pressable
                         accessibilityRole="button"
