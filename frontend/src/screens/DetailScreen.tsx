@@ -42,17 +42,18 @@ export function DetailScreen() {
         product?.kind === "BUNDLE"
             ? product.videoIds.every((id) => library.some((item) => item.product.id === id && item.active))
             : library.some((item) => item.product.id === product?.id && item.active);
+    const productId = product?.id;
     useEffect(() => {
         setUri("");
         setFull(false);
         setTab("intro");
         setContact("");
         setReview("");
-        if (!product) {
+        if (!productId) {
             return;
         }
         const abort = new AbortController();
-        read(decodeArray(decodeActivity), `/public/products/${product.id}/reviews`, "", "GET", undefined, abort.signal)
+        read(decodeArray(decodeActivity), `/public/products/${productId}/reviews`, "", "GET", undefined, abort.signal)
             .then((value) => {
                 if (!abort.signal.aborted) {
                     setReviews(value);
@@ -64,7 +65,7 @@ export function DetailScreen() {
                 }
             });
         return () => abort.abort();
-    }, [product?.id]);
+    }, [productId]);
     if (!product) {
         return null;
     }

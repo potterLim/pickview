@@ -1,6 +1,6 @@
 import { decodeArray } from "../core/validation";
 import { decodeOrder, decodeTicket } from "../core/contracts";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Text, View, useWindowDimensions } from "react-native";
 import { request, read } from "../core/api";
 import { useStore } from "../core/Store";
@@ -327,19 +327,22 @@ export function OrdersScreen() {
     const [reason, setReason] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    async function loadOrders(signal?: AbortSignal) {
-        const [newOrders, newTickets] = await Promise.all([
-            read(decodeArray(decodeOrder), "/orders", token, "GET", undefined, signal),
-            read(decodeArray(decodeTicket), "/tickets", token, "GET", undefined, signal),
-        ]);
-        if (signal?.aborted) {
-            return;
-        }
-        setOrders(newOrders);
-        setTickets(newTickets);
-        setError("");
-        setLoading(false);
-    }
+    const loadOrders = useCallback(
+        async (signal?: AbortSignal) => {
+            const [newOrders, newTickets] = await Promise.all([
+                read(decodeArray(decodeOrder), "/orders", token, "GET", undefined, signal),
+                read(decodeArray(decodeTicket), "/tickets", token, "GET", undefined, signal),
+            ]);
+            if (signal?.aborted) {
+                return;
+            }
+            setOrders(newOrders);
+            setTickets(newTickets);
+            setError("");
+            setLoading(false);
+        },
+        [token],
+    );
     useEffect(() => {
         const controller = new AbortController();
         loadOrders(controller.signal).catch(() => {
@@ -349,7 +352,7 @@ export function OrdersScreen() {
             }
         });
         return () => controller.abort();
-    }, [token]);
+    }, [loadOrders, t]);
     function openRefund(id: string) {
         setReason("");
         setSelectedLine(id);

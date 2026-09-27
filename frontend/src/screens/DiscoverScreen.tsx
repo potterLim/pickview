@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ImageBackground, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useStore } from "../core/Store";
 import { colors, styles } from "../ui/theme";
-import { ProductCard } from "../ui/ProductCard";
+import { ProductCard, thumbnails } from "../ui/ProductCard";
 import { Button, Empty } from "../ui/Controls";
 
 export function DiscoverScreen() {
@@ -99,7 +99,7 @@ export function DiscoverScreen() {
             </View>
             {route === "discover" && !query && !category ? (
                 <ImageBackground
-                    source={require("../../assets/studio.png")}
+                    source={thumbnails.studio}
                     imageStyle={{ borderRadius: 18 }}
                     style={{
                         minHeight: width < 600 ? 215 : 270,

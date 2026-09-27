@@ -1,3 +1,4 @@
+import type { ProductPrice, AccessTerm } from "./commerceValues";
 import { read, request } from "./api";
 import { decodeProduct } from "./contracts";
 import type { ProductId } from "./identifiers";
@@ -7,8 +8,8 @@ export interface IProductInput {
     title: string;
     description: string;
     tags: string;
-    priceWon: number;
-    termDays: number;
+    priceWon: ProductPrice;
+    termDays: AccessTerm;
     category: IProduct["category"];
     kind: IProduct["kind"];
     videoIds: ProductId[];

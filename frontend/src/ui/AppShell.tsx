@@ -33,7 +33,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             navigate("detail", product);
             window.history.replaceState({}, "", window.location.pathname);
         }
-    }, [products.length]);
+    }, [products, navigate]);
     return (
         <View style={{ flex: 1, backgroundColor: "white", flexDirection: "row" }}>
             {!mobile ? (

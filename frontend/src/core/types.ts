@@ -1,5 +1,17 @@
+import type { WonAmount, AccessTerm } from "./commerceValues";
 import type { ProductId, AccountId } from "./identifiers";
-import type { ERole, ESellerStatus, EProductKind, ECategory, EProductStatus, EActivityKind, ETicketKind, ETicketStatus, EPaymentChannel, EOrderStatus } from "./domain";
+import type {
+    ERole,
+    ESellerStatus,
+    EProductKind,
+    ECategory,
+    EProductStatus,
+    EActivityKind,
+    ETicketKind,
+    ETicketStatus,
+    EPaymentChannel,
+    EOrderStatus,
+} from "./domain";
 
 export interface IUser {
     id: AccountId;
@@ -18,8 +30,8 @@ export interface IProduct {
     title: string;
     description: string;
     category: `${ECategory}`;
-    priceWon: number;
-    termDays: number;
+    priceWon: WonAmount;
+    termDays: AccessTerm;
     status: `${EProductStatus}`;
     thumbnail: string;
     durationSeconds: number;
@@ -51,11 +63,11 @@ export interface IOrderLine {
     id: string;
     productId: ProductId;
     title: string;
-    priceWon: number;
-    channelFeeWon: number;
-    platformFeeWon: number;
-    sellerAmountWon: number;
-    termDays: number;
+    priceWon: WonAmount;
+    channelFeeWon: WonAmount;
+    platformFeeWon: WonAmount;
+    sellerAmountWon: WonAmount;
+    termDays: AccessTerm;
     refunded: boolean;
     settlementId: string;
 }
@@ -65,7 +77,7 @@ export interface IOrder {
     channel: `${EPaymentChannel}`;
     createdAt: number;
     lines: IOrderLine[];
-    totalWon: number;
+    totalWon: WonAmount;
 }
 export interface ITicket {
     id: string;

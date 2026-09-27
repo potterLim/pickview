@@ -1,6 +1,6 @@
 import { decodeArray } from "../core/validation";
 import { decodeSeller, decodeTicket, decodeNotice } from "../core/contracts";
-import { useEffect, useState, type ComponentProps } from "react";
+import { useEffect, useState, useCallback, type ComponentProps } from "react";
 import { Text, View, Pressable, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { request, read } from "../core/api";
@@ -16,21 +16,26 @@ export function SellerScreen() {
     const { selected, products, t, run, toggle, hasActivity } = useStore();
     const { width } = useWindowDimensions();
     const [bio, setBio] = useState("");
+    const sellerId = selected?.sellerId;
     useEffect(() => {
-        if (!selected) {
+        if (!sellerId) {
             return;
         }
         const controller = new AbortController();
         setBio("");
-        read(decodeSeller, `/public/sellers/${selected.sellerId}`, "", "GET", undefined, controller.signal)
-            .then((value) => setBio(value.bio.replace(/^(PERSONAL|BUSINESS):\s*/, "")))
+        read(decodeSeller, `/public/sellers/${sellerId}`, "", "GET", undefined, controller.signal)
+            .then((value) => {
+                if (!controller.signal.aborted) {
+                    setBio(value.bio.replace(/^(PERSONAL|BUSINESS):\s*/, ""));
+                }
+            })
             .catch(() => {
                 if (!controller.signal.aborted) {
                     setBio("");
                 }
             });
         return () => controller.abort();
-    }, [selected?.sellerId]);
+    }, [sellerId]);
     if (!selected) {
         return null;
     }
@@ -97,19 +102,22 @@ export function InboxScreen() {
     const [error, setError] = useState("");
     const [sent, setSent] = useState(false);
     const unread = notices.filter((notice) => !notice.read).length;
-    async function reload(signal?: AbortSignal) {
-        const [newTickets, newNotices] = await Promise.all([
-            read(decodeArray(decodeTicket), "/tickets", token, "GET", undefined, signal),
-            read(decodeArray(decodeNotice), "/notices", token, "GET", undefined, signal),
-        ]);
-        if (signal?.aborted) {
-            return;
-        }
-        setTickets(newTickets);
-        setNotices(newNotices);
-        setError("");
-        setLoading(false);
-    }
+    const reload = useCallback(
+        async (signal?: AbortSignal) => {
+            const [newTickets, newNotices] = await Promise.all([
+                read(decodeArray(decodeTicket), "/tickets", token, "GET", undefined, signal),
+                read(decodeArray(decodeNotice), "/notices", token, "GET", undefined, signal),
+            ]);
+            if (signal?.aborted) {
+                return;
+            }
+            setTickets(newTickets);
+            setNotices(newNotices);
+            setError("");
+            setLoading(false);
+        },
+        [token],
+    );
     useEffect(() => {
         const controller = new AbortController();
         reload(controller.signal).catch(() => {
@@ -119,7 +127,7 @@ export function InboxScreen() {
             }
         });
         return () => controller.abort();
-    }, [token]);
+    }, [reload, t]);
     async function sendMessage() {
         await request("/tickets", token, "POST", { kind: "SUPPORT", targetId: "", message: message.trim() });
         setMessage("");
@@ -392,7 +400,7 @@ export function SettingsScreen() {
     useEffect(() => {
         setInterests(user?.interests ?? "");
         setSaved(false);
-    }, [user?.id]);
+    }, [user?.id, user?.interests]);
     const dirty = interests !== (user?.interests ?? "") || language !== user?.language;
     function toggleInterest(value: string) {
         const selected = interests.split(",").filter(Boolean);

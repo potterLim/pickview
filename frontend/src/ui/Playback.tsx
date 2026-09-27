@@ -91,7 +91,7 @@ export function Playback({
             complete.remove();
             playing.remove();
         };
-    }, [player, token, product.id, product.durationSeconds, full]);
+    }, [player, token, product.id, product.durationSeconds, full, rememberProgress]);
 
     return (
         <View style={{ gap: 12 }}>

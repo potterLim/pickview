@@ -1,10 +1,11 @@
+import { createProductPrice } from "../core/commerceValues";
 import { ProductDraft, type IProductInput } from "../core/ProductDraft";
 import type { ProductId } from "../core/identifiers";
 import { ECategory, EProductKind } from "../core/domain";
 import { getErrorMessage } from "../core/validation";
 import { decodeArray } from "../core/validation";
 import { decodeProduct, decodeOrderLine, decodeSettlementSummary } from "../core/contracts";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Text, View, Platform } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { useStore } from "../core/Store";
@@ -27,19 +28,22 @@ export function StudioScreen() {
     const [displayName, setDisplayName] = useState(user?.displayName ?? "");
     const [bio, setBio] = useState((user?.bio ?? "").replace(/^(PERSONAL|BUSINESS):\s*/, ""));
     const [type, setType] = useState(user?.bio.startsWith("BUSINESS:") ? "BUSINESS" : "PERSONAL");
-    async function reload(signal?: AbortSignal) {
-        const [catalog, lines, summary] = await Promise.all([
-            read(decodeArray(decodeProduct), "/seller/products", token, "GET", undefined, signal),
-            read(decodeArray(decodeOrderLine), "/seller/sales", token, "GET", undefined, signal),
-            read(decodeSettlementSummary, "/seller/settlements", token, "GET", undefined, signal),
-        ]);
-        if (signal?.aborted) {
-            return;
-        }
-        setProducts(catalog);
-        setSales(lines);
-        setSettlement(summary);
-    }
+    const reload = useCallback(
+        async (signal?: AbortSignal) => {
+            const [catalog, lines, summary] = await Promise.all([
+                read(decodeArray(decodeProduct), "/seller/products", token, "GET", undefined, signal),
+                read(decodeArray(decodeOrderLine), "/seller/sales", token, "GET", undefined, signal),
+                read(decodeSettlementSummary, "/seller/settlements", token, "GET", undefined, signal),
+            ]);
+            if (signal?.aborted) {
+                return;
+            }
+            setProducts(catalog);
+            setSales(lines);
+            setSettlement(summary);
+        },
+        [token],
+    );
     useEffect(() => {
         if (user?.sellerStatus !== "APPROVED") {
             return;
@@ -51,12 +55,12 @@ export function StudioScreen() {
             }
         });
         return () => controller.abort();
-    }, [token, user?.sellerStatus]);
+    }, [reload, notify, user?.sellerStatus]);
     useEffect(() => {
         setDisplayName(user?.displayName ?? "");
         setBio((user?.bio ?? "").replace(/^(PERSONAL|BUSINESS):\s*/, ""));
         setType(user?.bio.startsWith("BUSINESS:") ? "BUSINESS" : "PERSONAL");
-    }, [user?.id]);
+    }, [user?.id, user?.bio, user?.displayName]);
     if (user?.sellerStatus !== "APPROVED") {
         const pending = user?.sellerStatus === "PENDING";
         return (
@@ -335,7 +339,7 @@ function ProductEditor({
     onCancel: () => void;
 }) {
     const { token, t, language, run, busy, notify } = useStore();
-    const draft = useRef(new ProductDraft(product?.id ?? null));
+    const [draft] = useState(() => new ProductDraft(product?.id ?? null));
     const [hasPersistedProduct, setHasPersistedProduct] = useState(product !== null);
     const [title, setTitle] = useState(product?.title ?? "");
     const [description, setDescription] = useState(product?.description ?? "");
@@ -369,7 +373,7 @@ function ProductEditor({
             title,
             description,
             tags,
-            priceWon: Number(price),
+            priceWon: createProductPrice(Number(price)),
             termDays: term,
             category,
             kind,
@@ -377,7 +381,7 @@ function ProductEditor({
             hasRights: rights,
             thumbnail: product?.thumbnail ?? "studio",
         };
-        const id = await draft.current.save(payload, token);
+        const id = await draft.save(payload, token);
         setHasPersistedProduct(true);
         if (thumbnail) {
             const body = new FormData();
@@ -445,7 +449,7 @@ function ProductEditor({
             </View>
             <Field label={t("가격 (원)", "Price (KRW)")} value={price} onChangeText={setPrice} keyboardType="numeric" />
             <View style={styles.row}>
-                {[0, 7, 30, 90].map((value) => (
+                {([0, 7, 30, 90] as const).map((value) => (
                     <Button
                         key={value}
                         label={value ? `${value}${t("일", " days")}` : t("기간 제한 없음", "Unlimited")}

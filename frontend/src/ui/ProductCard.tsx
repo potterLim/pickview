@@ -7,11 +7,12 @@ import { API_URL } from "../core/api";
 import { categoryLabel, durationLabel, productTitle } from "../core/presentation";
 import { colors, money, styles } from "./theme";
 
+// Metro resolves these static bundled assets to React Native image sources.
 export const thumbnails: Record<string, ImageSourcePropType> = {
-    studio: require("../../assets/studio.png"),
-    pottery: require("../../assets/pottery.png"),
-    finance: require("../../assets/finance.png"),
-    comedy: require("../../assets/comedy.png"),
+    studio: require("../../assets/studio.png") as ImageSourcePropType,
+    pottery: require("../../assets/pottery.png") as ImageSourcePropType,
+    finance: require("../../assets/finance.png") as ImageSourcePropType,
+    comedy: require("../../assets/comedy.png") as ImageSourcePropType,
 };
 
 export function ProductArtwork({

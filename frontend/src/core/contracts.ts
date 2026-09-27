@@ -1,8 +1,33 @@
+import { decodeWonAmount, decodeAccessTerm } from "./commerceValues";
 import { decodeProductId, decodeAccountId } from "./identifiers";
-import { ERole, ESellerStatus, EProductKind, ECategory, EProductStatus, EActivityKind, ETicketKind, ETicketStatus, EPaymentChannel, EOrderStatus } from "./domain";
+import {
+    ERole,
+    ESellerStatus,
+    EProductKind,
+    ECategory,
+    EProductStatus,
+    EActivityKind,
+    ETicketKind,
+    ETicketStatus,
+    EPaymentChannel,
+    EOrderStatus,
+} from "./domain";
 import { decodeChoice } from "./validation";
 import { decodeObject, decodeString, decodeNumber, decodeBoolean, decodeArray } from "./validation";
-import type { IUser, IProduct, IActivity, ILibraryItem, IOrderLine, IOrder, ITicket, INotice, IAudit, IRefundAdjustment, ISettlementSummary, IDashboard } from "./types";
+import type {
+    IUser,
+    IProduct,
+    IActivity,
+    ILibraryItem,
+    IOrderLine,
+    IOrder,
+    ITicket,
+    INotice,
+    IAudit,
+    IRefundAdjustment,
+    ISettlementSummary,
+    IDashboard,
+} from "./types";
 
 export function decodeUser(value: unknown): IUser {
     const item = decodeObject(value);
@@ -27,8 +52,8 @@ export function decodeProduct(value: unknown): IProduct {
         title: decodeString(item.title),
         description: decodeString(item.description),
         category: decodeChoice(Object.values(ECategory), item.category),
-        priceWon: decodeNumber(item.priceWon),
-        termDays: decodeNumber(item.termDays),
+        priceWon: decodeWonAmount(item.priceWon),
+        termDays: decodeAccessTerm(item.termDays),
         status: decodeChoice(Object.values(EProductStatus), item.status),
         thumbnail: decodeString(item.thumbnail),
         durationSeconds: decodeNumber(item.durationSeconds),
@@ -72,11 +97,11 @@ export function decodeOrderLine(value: unknown): IOrderLine {
         id: decodeString(item.id),
         productId: decodeProductId(item.productId),
         title: decodeString(item.title),
-        priceWon: decodeNumber(item.priceWon),
-        channelFeeWon: decodeNumber(item.channelFeeWon),
-        platformFeeWon: decodeNumber(item.platformFeeWon),
-        sellerAmountWon: decodeNumber(item.sellerAmountWon),
-        termDays: decodeNumber(item.termDays),
+        priceWon: decodeWonAmount(item.priceWon),
+        channelFeeWon: decodeWonAmount(item.channelFeeWon),
+        platformFeeWon: decodeWonAmount(item.platformFeeWon),
+        sellerAmountWon: decodeWonAmount(item.sellerAmountWon),
+        termDays: decodeAccessTerm(item.termDays),
         refunded: decodeBoolean(item.refunded),
         settlementId: decodeString(item.settlementId),
     };
@@ -90,7 +115,7 @@ export function decodeOrder(value: unknown): IOrder {
         channel: decodeChoice(Object.values(EPaymentChannel), item.channel),
         createdAt: decodeNumber(item.createdAt),
         lines: decodeArray(decodeOrderLine)(item.lines),
-        totalWon: decodeNumber(item.totalWon),
+        totalWon: decodeWonAmount(item.totalWon),
     };
 }
 

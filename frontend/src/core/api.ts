@@ -1,8 +1,13 @@
 import { Platform } from "react-native";
 import type { Decoder } from "./validation";
 
-export const API_URL =
-    process.env.EXPO_PUBLIC_API_URL ?? (Platform.OS === "android" ? "http://10.0.2.2:8080" : "http://localhost:8080");
+const configuredApiUrl: unknown = process.env.EXPO_PUBLIC_API_URL;
+export const API_URL: string =
+    typeof configuredApiUrl === "string" && configuredApiUrl.length > 0
+        ? configuredApiUrl
+        : Platform.OS === "android"
+          ? "http://10.0.2.2:8080"
+          : "http://localhost:8080";
 
 export class ApiError extends Error {
     private readonly mStatus: number;
@@ -45,8 +50,10 @@ export async function requireSuccessfulResponse(response: Response): Promise<voi
         return;
     }
     const error: unknown = await response.json().catch(() => null);
-    const message = typeof error === "object" && error !== null && "message" in error
-        && typeof error.message === "string" ? error.message : `HTTP ${response.status}`;
+    const message =
+        typeof error === "object" && error !== null && "message" in error && typeof error.message === "string"
+            ? error.message
+            : `HTTP ${response.status}`;
     throw new ApiError(message, response.status);
 }
 

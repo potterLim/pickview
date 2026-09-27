@@ -17,14 +17,19 @@ function loadCore(fetch) {
         }).outputText;
         const exports = {};
         cache.set(name, exports);
-        vm.runInNewContext(source, {
-            exports,
-            require: (moduleName) => moduleName === "react-native" ? { Platform: { OS: "web" } } : load(moduleName.slice(2)),
-            fetch,
-            process: { env: {} },
-            Response,
-            AbortController,
-        }, { filename: file });
+        vm.runInNewContext(
+            source,
+            {
+                exports,
+                require: (moduleName) =>
+                    moduleName === "react-native" ? { Platform: { OS: "web" } } : load(moduleName.slice(2)),
+                fetch,
+                process: { env: {} },
+                Response,
+                AbortController,
+            },
+            { filename: file },
+        );
         return exports;
     }
     return load;
@@ -32,10 +37,26 @@ function loadCore(fetch) {
 
 function product() {
     return {
-        id: "video", sellerId: "seller", sellerName: "Seller", title: "Video", description: "Demo",
-        category: "EDUCATION", priceWon: 3000, termDays: 30, status: "DRAFT", thumbnail: "studio",
-        durationSeconds: 30, kind: "VIDEO", videoIds: ["video"], rating: 0, reviewCount: 0,
-        sales: 0, createdAt: 1, blocked: false, tags: "", isDemo: false,
+        id: "video",
+        sellerId: "seller",
+        sellerName: "Seller",
+        title: "Video",
+        description: "Demo",
+        category: "EDUCATION",
+        priceWon: 3000,
+        termDays: 30,
+        status: "DRAFT",
+        thumbnail: "studio",
+        durationSeconds: 30,
+        kind: "VIDEO",
+        videoIds: ["video"],
+        rating: 0,
+        reviewCount: 0,
+        sales: 0,
+        createdAt: 1,
+        blocked: false,
+        tags: "",
+        isDemo: false,
     };
 }
 
@@ -46,26 +67,54 @@ test("API rejects malformed contracts and retains status for null error bodies",
     assert.throws(() => contracts.decodeProduct({ ...product(), id: 17 }));
     assert.throws(() => contracts.decodeProduct({ ...product(), kind: "UNKNOWN" }));
     assert.equal(contracts.decodeProduct(product()).id, "video");
-    assert.equal(contracts.decodeTicket({
-        id: "ticket", userId: "buyer", targetId: "video", recipientId: "seller", kind: "INQUIRY",
-        message: "Question", status: "RESOLVED", reply: "Answer", createdAt: 1,
-    }).status, "RESOLVED");
+    assert.equal(
+        contracts.decodeTicket({
+            id: "ticket",
+            userId: "buyer",
+            targetId: "video",
+            recipientId: "seller",
+            kind: "INQUIRY",
+            message: "Question",
+            status: "RESOLVED",
+            reply: "Answer",
+            createdAt: 1,
+        }).status,
+        "RESOLVED",
+    );
 });
 
 test("logout clears private state even when persistent storage fails", async () => {
     const load = loadCore();
     let signedIn = true;
-    await assert.rejects(load("session").clearLocalSession(
-        () => { signedIn = false; },
-        async () => { throw new Error("Storage unavailable"); },
-    ));
+    await assert.rejects(
+        load("session").clearLocalSession(
+            () => {
+                signedIn = false;
+            },
+            async () => {
+                throw new Error("Storage unavailable");
+            },
+        ),
+    );
     assert.equal(signedIn, false);
+});
+
+test("commerce values reject invalid units and unsupported price policies", () => {
+    const values = loadCore()("commerceValues");
+    assert.throws(() => values.decodeWonAmount(-1));
+    assert.throws(() => values.decodeWonAmount(1.5));
+    assert.throws(() => values.createProductPrice(1050));
+    assert.throws(() => values.decodeAccessTerm(31));
+    assert.equal(values.createProductPrice(3000), 3000);
+    assert.equal(values.decodeAccessTerm(0), 0);
 });
 
 test("progress writes remain ordered across callers and recover after failure", async () => {
     const positions = [];
     let releaseFirst;
-    const firstResponse = new Promise((resolve) => { releaseFirst = resolve; });
+    const firstResponse = new Promise((resolve) => {
+        releaseFirst = resolve;
+    });
     const load = loadCore(async (_url, options) => {
         positions.push(JSON.parse(options.body).numberValue);
         return positions.length === 1 ? firstResponse : new Response(null, { status: 204 });

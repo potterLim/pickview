@@ -1,6 +1,6 @@
 import { getErrorMessage } from "../core/validation";
 import { decodeDashboard } from "../core/contracts";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Text, View } from "react-native";
 import { useStore } from "../core/Store";
 import { request, read } from "../core/api";
@@ -18,13 +18,16 @@ export function AdminScreen() {
     const [roleId, setRoleId] = useState("");
     const [role, setRole] = useState("CONTENT");
     const [loadError, setLoadError] = useState("");
-    async function reload(signal?: AbortSignal) {
-        const result = await read(decodeDashboard, "/admin/dashboard", token, "GET", undefined, signal);
-        if (!signal?.aborted) {
-            setDashboard(result);
-            setLoadError("");
-        }
-    }
+    const reload = useCallback(
+        async (signal?: AbortSignal) => {
+            const result = await read(decodeDashboard, "/admin/dashboard", token, "GET", undefined, signal);
+            if (!signal?.aborted) {
+                setDashboard(result);
+                setLoadError("");
+            }
+        },
+        [token],
+    );
     useEffect(() => {
         const controller = new AbortController();
         setDashboard(null);
@@ -35,17 +38,19 @@ export function AdminScreen() {
             }
         });
         return () => controller.abort();
-    }, [token]);
+    }, [reload]);
     async function decide(path: string, body: unknown) {
         await request(path, token, "POST", body);
         await reload();
         await refresh();
     }
     if (loadError) {
-        return <View style={styles.page}>
-            <Text style={styles.text}>{loadError}</Text>
-            <Button label={t("다시 시도", "Retry")} onPress={() => run(() => reload())} />
-        </View>;
+        return (
+            <View style={styles.page}>
+                <Text style={styles.text}>{loadError}</Text>
+                <Button label={t("다시 시도", "Retry")} onPress={() => run(() => reload())} />
+            </View>
+        );
     }
     if (!dashboard) {
         return <Loading />;

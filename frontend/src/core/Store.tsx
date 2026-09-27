@@ -48,7 +48,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const refreshController = useRef<AbortController | null>(null);
     const intendedRoute = useRef<Route | null>(null);
     const pendingActivity = useRef<{ kind: string; targetId: string } | null>(null);
-    const t = (ko: string, en: string) => (language === "ko" ? ko : en);
+    const t = useCallback((ko: string, en: string) => (language === "ko" ? ko : en), [language]);
 
     const refresh = useCallback(async () => {
         refreshController.current?.abort();
@@ -83,14 +83,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 return;
             }
             if (error instanceof ApiError && error.status === 401) {
-                await clearLocalSession(() => {
-                    setToken("");
-                    setUser(null);
-                    setActivity([]);
-                    setLibrary([]);
-                    setSelected(null);
-                    setRoute("login");
-                }, () => AsyncStorage.removeItem("pickview.token"));
+                await clearLocalSession(
+                    () => {
+                        setToken("");
+                        setUser(null);
+                        setActivity([]);
+                        setLibrary([]);
+                        setSelected(null);
+                        setRoute("login");
+                    },
+                    () => AsyncStorage.removeItem("pickview.token"),
+                );
             }
             throw error;
         }
@@ -118,16 +121,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return () => clearTimeout(timer);
     }, [message]);
 
-    function navigate(next: Route, product?: IProduct) {
-        if (product) {
-            setSelected(product);
-        }
-        const isPublic = ["discover", "detail", "seller", "login"].includes(next);
-        if (!token && !isPublic) {
-            intendedRoute.current = next;
-        }
-        setRoute(!token && !isPublic ? "login" : next);
-    }
+    const navigate = useCallback(
+        (next: Route, product?: IProduct) => {
+            if (product) {
+                setSelected(product);
+            }
+            const isPublic = ["discover", "detail", "seller", "login"].includes(next);
+            if (!token && !isPublic) {
+                intendedRoute.current = next;
+            }
+            setRoute(!token && !isPublic ? "login" : next);
+        },
+        [token],
+    );
     async function signIn(next: string) {
         refreshController.current?.abort();
         if (pendingActivity.current) {
@@ -148,17 +154,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         try {
             await request("/auth/logout", token, "POST");
         } finally {
-            await clearLocalSession(() => {
-            setToken("");
-            setUser(null);
-            setActivity([]);
-            setLibrary([]);
-            setSelected(null);
-            setMessage("");
-            setRoute("discover");
-            intendedRoute.current = null;
-            pendingActivity.current = null;
-            }, () => AsyncStorage.removeItem("pickview.token"));
+            await clearLocalSession(
+                () => {
+                    setToken("");
+                    setUser(null);
+                    setActivity([]);
+                    setLibrary([]);
+                    setSelected(null);
+                    setMessage("");
+                    setRoute("discover");
+                    intendedRoute.current = null;
+                    pendingActivity.current = null;
+                },
+                () => AsyncStorage.removeItem("pickview.token"),
+            );
         }
     }
     async function run(action: () => Promise<void>) {
@@ -213,7 +222,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             setMessage(t("장바구니에 담았어요. 원하는 때에 결제하세요.", "Added to your cart. Ready when you are."));
         }
     }
-    function rememberProgress(productId: ProductId, seconds: number) {
+    const rememberProgress = useCallback((productId: ProductId, seconds: number) => {
         setActivity((previous) => [
             ...previous.filter((item) => !(item.kind === "PROGRESS" && item.targetId === productId)),
             {
@@ -225,7 +234,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 author: "",
             },
         ]);
-    }
+    }, []);
     const value: IStore = {
         token,
         user,

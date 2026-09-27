@@ -10,12 +10,16 @@ export async function savePlaybackProgress(token: string, productId: ProductId, 
     const key = `${token}:${productId}`;
     const previous = pendingBySessionAndProduct.get(key) ?? Promise.resolve();
     // Share the queue across player remounts, so an old write cannot overtake a new one.
-    const pending = previous.catch(() => undefined).then(() => request("/activity", token, "PUT", {
-        targetId: productId,
-        kind: "PROGRESS",
-        content: "",
-        numberValue: seconds,
-    }));
+    const pending = previous
+        .catch(() => undefined)
+        .then(() =>
+            request("/activity", token, "PUT", {
+                targetId: productId,
+                kind: "PROGRESS",
+                content: "",
+                numberValue: seconds,
+            }),
+        );
     pendingBySessionAndProduct.set(key, pending);
     try {
         await pending;
