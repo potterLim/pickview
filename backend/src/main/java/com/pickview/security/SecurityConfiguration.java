@@ -3,7 +3,6 @@ package com.pickview.security;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import org.springframework.security.core.AuthenticationException;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -57,15 +57,16 @@ public class SecurityConfiguration {
                     .anyRequest()
                     .authenticated()
             )
-            .exceptionHandling(configuration ->
-                configuration.authenticationEntryPoint(this::rejectUnauthenticated)
-            )
+            .exceptionHandling(configuration -> configuration.authenticationEntryPoint(this::rejectUnauthenticated))
             .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
             .build();
     }
 
-    private void rejectUnauthenticated(HttpServletRequest request, HttpServletResponse response, AuthenticationException failure)
-        throws IOException {
+    private void rejectUnauthenticated(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        AuthenticationException failure
+    ) throws IOException {
         response.setStatus(401);
         response.setContentType("application/json;charset=UTF-8");
         response.getWriter().write("{\"message\":\"로그인이 필요합니다. / Sign in required.\"}");

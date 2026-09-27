@@ -1,7 +1,6 @@
 package com.pickview.model;
 
 import com.pickview.domain.EActivityKind;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

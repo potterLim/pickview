@@ -1,12 +1,9 @@
 package com.pickview.model;
 
-import com.pickview.domain.EProductKind;
-
-import com.pickview.domain.EProductStatus;
-
-import com.pickview.domain.ECategory;
-
 import com.pickview.domain.EAccessTerm;
+import com.pickview.domain.ECategory;
+import com.pickview.domain.EProductKind;
+import com.pickview.domain.EProductStatus;
 import com.pickview.domain.WonAmount;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

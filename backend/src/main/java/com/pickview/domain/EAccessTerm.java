@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.pickview.api.ApiFailure;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import org.springframework.http.HttpStatus;
 
 public enum EAccessTerm {
     PERPETUAL(0),
@@ -25,7 +26,7 @@ public enum EAccessTerm {
                 return term;
             }
         }
-        throw new ApiFailure(400, "Invalid access term");
+        throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid access term");
     }
 
     @JsonValue

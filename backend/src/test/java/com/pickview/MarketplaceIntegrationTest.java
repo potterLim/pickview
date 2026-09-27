@@ -13,9 +13,18 @@ import com.pickview.config.DemoContentUpgrade;
 import com.pickview.domain.AccountId;
 import com.pickview.domain.EActivityKind;
 import com.pickview.domain.EApprovalDecision;
+import com.pickview.domain.ECategory;
+import com.pickview.domain.EOrderStatus;
 import com.pickview.domain.EPaymentChannel;
 import com.pickview.domain.EPaymentOutcome;
+import com.pickview.domain.EProductKind;
+import com.pickview.domain.EProductStatus;
+import com.pickview.domain.ERole;
+import com.pickview.domain.ESellerStatus;
 import com.pickview.domain.ETicketKind;
+import com.pickview.domain.ETicketStatus;
+import com.pickview.domain.EmailAddress;
+import com.pickview.domain.Password;
 import com.pickview.domain.ProductId;
 import com.pickview.domain.TicketId;
 import com.pickview.model.Account;
@@ -130,15 +139,15 @@ class MarketplaceIntegrationTest {
                 "seller",
                 "Title",
                 "Description",
-                com.pickview.domain.ECategory.EDUCATION,
+                ECategory.EDUCATION,
                 20000,
                 30,
-                com.pickview.domain.EProductStatus.APPROVED,
+                EProductStatus.APPROVED,
                 "studio",
                 "test.mp4",
                 "preview.mp4",
                 30,
-                com.pickview.domain.EProductKind.VIDEO,
+                EProductKind.VIDEO,
                 "",
                 false,
                 1
@@ -154,15 +163,15 @@ class MarketplaceIntegrationTest {
                 "seller",
                 "Old sample",
                 "Description",
-                com.pickview.domain.ECategory.EDUCATION,
+                ECategory.EDUCATION,
                 1234,
                 30,
-                com.pickview.domain.EProductStatus.APPROVED,
+                EProductStatus.APPROVED,
                 "studio",
                 "demo.mp4",
                 "demo-preview.mp4",
                 30,
-                com.pickview.domain.EProductKind.VIDEO,
+                EProductKind.VIDEO,
                 "",
                 false,
                 1
@@ -172,20 +181,28 @@ class MarketplaceIntegrationTest {
         DemoContentUpgrade upgrade = new DemoContentUpgrade(mProducts, new ObjectMapper(), true);
         upgrade.run();
         assertEquals("sample-video-1.mp4", sample.getMediaKey());
-        assertEquals(com.pickview.domain.EProductStatus.APPROVED, sample.getStatus());
+        assertEquals(EProductStatus.APPROVED, sample.getStatus());
         assertEquals(1234, sample.getPriceWon());
         assertTrue(mCommerce.canWatch(new AccountId("buyer"), new ProductId("video-1")));
         sample.replaceMedia("creator-upload.mp4", "creator-preview.mp4", 60);
         upgrade.run();
         assertEquals("creator-upload.mp4", sample.getMediaKey());
-        assertEquals(com.pickview.domain.EProductStatus.PENDING, sample.getStatus());
+        assertEquals(EProductStatus.PENDING, sample.getStatus());
     }
 
     @Test
     void expiredGrantsDenyPlaybackButAllowRepurchase() {
         mGrants.save(new Grant("expired", "buyer", "video", "old-line", 1, false));
         assertFalse(mCommerce.canWatch(new AccountId("buyer"), new ProductId("video")));
-        mCommerce.checkout(mBuyer, new CommerceService.CheckoutRequest(List.of(new ProductId("video")), "new", EPaymentChannel.CARD, EPaymentOutcome.SUCCESS));
+        mCommerce.checkout(
+            mBuyer,
+            new CommerceService.CheckoutRequest(
+                List.of(new ProductId("video")),
+                "new",
+                EPaymentChannel.CARD,
+                EPaymentOutcome.SUCCESS
+            )
+        );
         assertTrue(mCommerce.canWatch(new AccountId("buyer"), new ProductId("video")));
     }
 
@@ -193,7 +210,19 @@ class MarketplaceIntegrationTest {
     void settledRefundIsDeductedExactlyOnceFromNextPayout() {
         saveHistoricalLine("refunded", 15000, "previous-settlement");
         mGrants.save(new Grant("grant", "buyer", "video", "refunded", 0, false));
-        mTickets.save(new Ticket("refund-ticket", "buyer", "refunded", "", com.pickview.domain.ETicketKind.REFUND, "Request", com.pickview.domain.ETicketStatus.OPEN, "", 1));
+        mTickets.save(
+            new Ticket(
+                "refund-ticket",
+                "buyer",
+                "refunded",
+                "",
+                ETicketKind.REFUND,
+                "Request",
+                ETicketStatus.OPEN,
+                "",
+                1
+            )
+        );
         mOperations.resolveTicket(mAdmin, new TicketId("refund-ticket"), "Approved", EApprovalDecision.APPROVE);
         assertFalse(mCommerce.canWatch(new AccountId("buyer"), new ProductId("video")));
         assertEquals(15000, mAdjustments.findById("refunded").orElseThrow().getAmountWon());
@@ -203,13 +232,27 @@ class MarketplaceIntegrationTest {
         assertTrue(mAdjustments.findPending("seller", "").isEmpty());
         assertEquals(0, mOperations.getSellerSettlementSummary(new AccountId("seller")).pendingWon());
         assertThrows(ApiFailure.class, () -> mOperations.settle(mAdmin, new AccountId("seller")));
-        assertThrows(ApiFailure.class, () -> mOperations.resolveTicket(mAdmin, new TicketId("refund-ticket"), "Again", EApprovalDecision.APPROVE));
+        assertThrows(ApiFailure.class, () ->
+            mOperations.resolveTicket(mAdmin, new TicketId("refund-ticket"), "Again", EApprovalDecision.APPROVE)
+        );
     }
 
     @Test
     void refundDebtCarriesForwardWhenNetPayoutIsBelowThreshold() {
         saveHistoricalLine("refunded", 15000, "previous-settlement");
-        mTickets.save(new Ticket("refund-ticket", "buyer", "refunded", "", com.pickview.domain.ETicketKind.REFUND, "Request", com.pickview.domain.ETicketStatus.OPEN, "", 1));
+        mTickets.save(
+            new Ticket(
+                "refund-ticket",
+                "buyer",
+                "refunded",
+                "",
+                ETicketKind.REFUND,
+                "Request",
+                ETicketStatus.OPEN,
+                "",
+                1
+            )
+        );
         mOperations.resolveTicket(mAdmin, new TicketId("refund-ticket"), "Approved", EApprovalDecision.APPROVE);
         saveHistoricalLine("small", 20000, "");
         assertThrows(ApiFailure.class, () -> mOperations.settle(mAdmin, new AccountId("seller")));
@@ -223,14 +266,20 @@ class MarketplaceIntegrationTest {
         assertThrows(ApiFailure.class, () ->
             mCommunity.createTicket(mBuyer, new CommunityService.TicketRequest("video", ETicketKind.INQUIRY, "Hello"))
         );
-        mCommunity.createTicket(mBuyer, new CommunityService.TicketRequest("video", ETicketKind.REPORT, "Safety report"));
+        mCommunity.createTicket(
+            mBuyer,
+            new CommunityService.TicketRequest("video", ETicketKind.REPORT, "Safety report")
+        );
         assertEquals(1, mCommunity.listTickets(new AccountId("buyer")).size());
     }
 
     @Test
     void catalogAggregatesReviewsAndSalesForAllProducts() {
         saveHistoricalLine("sale", 20000, "");
-        mCommunity.saveActivity(mBuyer, new CommunityService.ActivityRequest("video", EActivityKind.REVIEW, "Useful", 4));
+        mCommunity.saveActivity(
+            mBuyer,
+            new CommunityService.ActivityRequest("video", EActivityKind.REVIEW, "Useful", 4)
+        );
         com.pickview.catalog.CatalogService.ProductView product = mCatalog.listPublished().getFirst();
         assertEquals(4.0, product.rating());
         assertEquals(1, product.reviewCount());
@@ -239,8 +288,8 @@ class MarketplaceIntegrationTest {
 
     @Test
     void authenticationFindsOnlyValidTokensAndLogoutRevokesThem() {
-        com.pickview.domain.EmailAddress email = new com.pickview.domain.EmailAddress("  USER@Test.local  ");
-        com.pickview.domain.Password password = new com.pickview.domain.Password("Valid-password-2026!");
+        EmailAddress email = new EmailAddress("  USER@Test.local  ");
+        Password password = new Password("Valid-password-2026!");
         Account account = mAccountService.register(email, password, "User", true);
         String token = mAccountService.login(email, password);
         assertEquals(account.getId(), mAccountService.authenticateOrNull(token).getId());
@@ -250,22 +299,37 @@ class MarketplaceIntegrationTest {
 
     @Test
     void httpBoundaryRejectsOmittedDecisionsAndInvalidCartElements() throws Exception {
-        mMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/admin/sellers/seller")
-            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN"))
-            .contentType("application/json").content("{}"))
-            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
-        mMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/checkout")
-            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("buyer"))
-            .contentType("application/json")
-            .content("{\"productIds\":[null],\"requestKey\":\"key\",\"channel\":\"CARD\",\"outcome\":\"SUCCESS\"}"))
-            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        mMvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/admin/sellers/seller")
+                .with(
+                    org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(
+                        "admin"
+                    ).roles("ADMIN")
+                )
+                .contentType("application/json")
+                .content("{}")
+        ).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        mMvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/checkout")
+                .with(
+                    org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(
+                        "buyer"
+                    )
+                )
+                .contentType("application/json")
+                .content("{\"productIds\":[null],\"requestKey\":\"key\",\"channel\":\"CARD\",\"outcome\":\"SUCCESS\"}")
+        ).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
         mMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/public/products"))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
-            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$[0].kind").value("VIDEO"));
+            .andExpect(
+                org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$[0].kind").value("VIDEO")
+            );
     }
 
     private Account saveAccount(String id, String role) {
-        return mAccounts.save(new Account(id, id + "@test.local", "unused", id, com.pickview.domain.ERole.valueOf(role), com.pickview.domain.ESellerStatus.APPROVED, "", "ko", ""));
+        return mAccounts.save(
+            new Account(id, id + "@test.local", "unused", id, ERole.valueOf(role), ESellerStatus.APPROVED, "", "ko", "")
+        );
     }
 
     private void saveHistoricalLine(String id, int amount, String settlement) {
@@ -274,8 +338,8 @@ class MarketplaceIntegrationTest {
                 id + "-purchase",
                 "buyer",
                 id + "-key",
-                com.pickview.domain.EOrderStatus.SUCCESS,
-                com.pickview.domain.EPaymentChannel.CARD,
+                EOrderStatus.SUCCESS,
+                EPaymentChannel.CARD,
                 Instant.parse("2026-08-10T00:00:00Z").toEpochMilli()
             )
         );

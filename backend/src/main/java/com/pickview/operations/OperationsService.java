@@ -8,7 +8,11 @@ import com.pickview.community.CommunityService;
 import com.pickview.domain.AccountId;
 import com.pickview.domain.EApprovalDecision;
 import com.pickview.domain.EProductDecision;
+import com.pickview.domain.EProductKind;
+import com.pickview.domain.EProductStatus;
 import com.pickview.domain.ERole;
+import com.pickview.domain.ETicketKind;
+import com.pickview.domain.ETicketStatus;
 import com.pickview.domain.OrderLineId;
 import com.pickview.domain.ProductId;
 import com.pickview.domain.TicketId;
@@ -36,6 +40,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -96,7 +101,7 @@ public class OperationsService {
         requireRole(operator, ERole.CONTENT, ERole.SUPPORT, ERole.FINANCE);
         boolean canReviewContent = hasRole(operator, ERole.CONTENT);
         boolean canManageFinance = hasRole(operator, ERole.FINANCE);
-        boolean isAdministrator = operator.getRole().equals(com.pickview.domain.ERole.ADMIN);
+        boolean isAdministrator = operator.getRole().equals(ERole.ADMIN);
         return new DashboardView(
             canReviewContent ? mAccounts.findAll().stream().map(UserView::createFromAccount).toList() : List.of(),
             canReviewContent ? mCatalog.describeProducts(mProducts.findAll()) : List.of(),
@@ -122,7 +127,10 @@ public class OperationsService {
             .findAll()
             .stream()
             .filter(
-                line -> line.getSellerId().equals(sellerId.getValue()) && !line.isRefunded() && line.getSettlementId().isEmpty()
+                line ->
+                    line.getSellerId().equals(sellerId.getValue()) &&
+                    !line.isRefunded() &&
+                    line.getSettlementId().isEmpty()
             )
             .mapToInt(OrderLine::getSellerAmountWon)
             .sum();
@@ -143,13 +151,20 @@ public class OperationsService {
     public void reviewSeller(Account operator, AccountId id, EApprovalDecision decision) {
         java.util.Objects.requireNonNull(decision, "decision");
         requireRole(operator, ERole.CONTENT);
-        Account seller = mAccounts.findById(id.getValue()).orElseThrow(() -> new ApiFailure(404, "Seller not found"));
+        Account seller = mAccounts
+            .findById(id.getValue())
+            .orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Seller not found"));
         if (decision == EApprovalDecision.APPROVE) {
             seller.approveSeller();
         } else {
             seller.rejectSeller();
         }
-        audit(operator, "SELLER_REVIEW", id.getValue(), decision == EApprovalDecision.APPROVE ? "APPROVED" : "REJECTED");
+        audit(
+            operator,
+            "SELLER_REVIEW",
+            id.getValue(),
+            decision == EApprovalDecision.APPROVE ? "APPROVED" : "REJECTED"
+        );
         mCommunity.notifyUser(id, "판매자 심사 완료 / Seller application reviewed");
     }
 
@@ -158,18 +173,18 @@ public class OperationsService {
         java.util.Objects.requireNonNull(decision, "decision");
         requireRole(operator, ERole.CONTENT);
         Product product = mCatalog.requireProduct(id);
-        boolean wasPublished = product.getStatus().equals(com.pickview.domain.EProductStatus.APPROVED);
+        boolean wasPublished = product.getStatus().equals(EProductStatus.APPROVED);
         switch (decision) {
             case APPROVE -> {
-                if (product.getKind().equals(com.pickview.domain.EProductKind.VIDEO) && product.getMediaKey().isBlank()) {
-                    throw new ApiFailure(409, "Missing video");
+                if (product.getKind().equals(EProductKind.VIDEO) && product.getMediaKey().isBlank()) {
+                    throw new ApiFailure(HttpStatus.CONFLICT, "Missing video");
                 }
                 product.publish();
             }
             case REJECT -> product.reject();
             case WITHDRAW -> product.withdraw();
             case BLOCK -> product.block();
-            default -> throw new ApiFailure(400, "Invalid decision");
+            default -> throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid decision");
         }
         audit(operator, "PRODUCT_REVIEW", id.getValue(), decision.name());
         mCommunity.notifyUser(new AccountId(product.getSellerId()), "영상 심사 결과 / Video review: " + decision);
@@ -183,21 +198,21 @@ public class OperationsService {
         java.util.Objects.requireNonNull(decision, "decision");
         Ticket ticket = mEntityManager.find(Ticket.class, id.getValue(), LockModeType.PESSIMISTIC_WRITE);
         if (ticket == null) {
-            throw new ApiFailure(404, "Ticket not found");
+            throw new ApiFailure(HttpStatus.NOT_FOUND, "Ticket not found");
         }
-        requireRole(operator, ticket.getKind().equals(com.pickview.domain.ETicketKind.REPORT) ? ERole.CONTENT : ERole.SUPPORT);
+        requireRole(operator, ticket.getKind().equals(ETicketKind.REPORT) ? ERole.CONTENT : ERole.SUPPORT);
         if (
-            ticket.getKind().equals(com.pickview.domain.ETicketKind.INQUIRY) ||
-            !ticket.getStatus().equals(com.pickview.domain.ETicketStatus.OPEN) ||
+            ticket.getKind().equals(ETicketKind.INQUIRY) ||
+            !ticket.getStatus().equals(ETicketStatus.OPEN) ||
             reply.isBlank() ||
             reply.length() > 4000
         ) {
-            throw new ApiFailure(409, "처리할 수 없는 문의입니다. / Ticket cannot be resolved.");
+            throw new ApiFailure(HttpStatus.CONFLICT, "처리할 수 없는 문의입니다. / Ticket cannot be resolved.");
         }
-        if (ticket.getKind().equals(com.pickview.domain.ETicketKind.REFUND) && decision == EApprovalDecision.APPROVE) {
+        if (ticket.getKind().equals(ETicketKind.REFUND) && decision == EApprovalDecision.APPROVE) {
             refundLine(new OrderLineId(ticket.getTargetId()));
         }
-        ticket.resolve(reply, decision == EApprovalDecision.APPROVE ? com.pickview.domain.ETicketStatus.APPROVED : com.pickview.domain.ETicketStatus.REJECTED);
+        ticket.resolve(reply, decision == EApprovalDecision.APPROVE ? ETicketStatus.APPROVED : ETicketStatus.REJECTED);
         audit(operator, "TICKET_RESOLVED", id.getValue(), reply);
         mCommunity.notifyUser(new AccountId(ticket.getUserId()), "문의 처리 완료 / Your request was resolved");
     }
@@ -206,11 +221,11 @@ public class OperationsService {
     public void changeRole(Account operator, AccountId id, ERole role) {
         requireRole(operator);
         if (operator.getId().equals(id.getValue()) || role == null) {
-            throw new ApiFailure(400, "Invalid role change");
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid role change");
         }
         mAccounts
             .findById(id.getValue())
-            .orElseThrow(() -> new ApiFailure(404, "Account not found"))
+            .orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Account not found"))
             .changeRole(role);
         audit(operator, "ROLE_CHANGED", id.getValue(), role.name());
     }
@@ -219,11 +234,11 @@ public class OperationsService {
     public int settle(Account operator, AccountId sellerId) {
         requireRole(operator, ERole.FINANCE);
         if (mEntityManager.find(Account.class, sellerId.getValue(), LockModeType.PESSIMISTIC_WRITE) == null) {
-            throw new ApiFailure(404, "Seller not found");
+            throw new ApiFailure(HttpStatus.NOT_FOUND, "Seller not found");
         }
         LocalDate today = LocalDate.now(mClock.withZone(ZoneId.of("Asia/Seoul")));
         if (today.getDayOfMonth() < SETTLEMENT_OPEN_DAY) {
-            throw new ApiFailure(409, "매월 15일부터 처리 가능합니다. / Settlement opens on the 15th.");
+            throw new ApiFailure(HttpStatus.CONFLICT, "매월 15일부터 처리 가능합니다. / Settlement opens on the 15th.");
         }
         long cutoff = today.withDayOfMonth(1).atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant().toEpochMilli();
         List<OrderLine> eligible = mLines
@@ -242,7 +257,10 @@ public class OperationsService {
             eligible.stream().mapToInt(OrderLine::getSellerAmountWon).sum() -
             adjustments.stream().mapToInt(RefundAdjustment::getAmountWon).sum();
         if (amount < MIN_PAYOUT_WON) {
-            throw new ApiFailure(409, "정산 가능 금액 1만원 미만은 이월됩니다. / Below payout threshold.");
+            throw new ApiFailure(
+                HttpStatus.CONFLICT,
+                "정산 가능 금액 1만원 미만은 이월됩니다. / Below payout threshold."
+            );
         }
         String id = UUID.randomUUID().toString();
         mSettlements.save(new Settlement(id, sellerId.getValue(), amount, System.currentTimeMillis()));
@@ -258,16 +276,18 @@ public class OperationsService {
     }
 
     private void refundLine(OrderLineId id) {
-        OrderLine existing = mLines.findById(id.getValue()).orElseThrow(() -> new ApiFailure(404, "Order not found"));
+        OrderLine existing = mLines
+            .findById(id.getValue())
+            .orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Order not found"));
         // Use the same seller lock as settlement so refund and payout cannot race.
         mEntityManager.find(Account.class, existing.getSellerId(), LockModeType.PESSIMISTIC_WRITE);
         OrderLine line = mEntityManager.find(OrderLine.class, id.getValue(), LockModeType.PESSIMISTIC_WRITE);
         if (line == null) {
-            throw new ApiFailure(404, "Order not found");
+            throw new ApiFailure(HttpStatus.NOT_FOUND, "Order not found");
         }
         mEntityManager.refresh(line);
         if (line.isRefunded()) {
-            throw new ApiFailure(409, "Already refunded");
+            throw new ApiFailure(HttpStatus.CONFLICT, "Already refunded");
         }
         if (!line.getSettlementId().isEmpty()) {
             mAdjustments.save(new RefundAdjustment(line.getId(), line.getSellerId(), line.getSellerAmountWon()));
@@ -289,12 +309,12 @@ public class OperationsService {
     }
 
     private boolean hasRole(Account operator, ERole role) {
-        return operator.getRole().equals(com.pickview.domain.ERole.ADMIN) || operator.getRole().equals(role);
+        return operator.getRole().equals(ERole.ADMIN) || operator.getRole().equals(role);
     }
 
     private void requireRole(Account operator, ERole... roles) {
-        if (!operator.getRole().equals(com.pickview.domain.ERole.ADMIN) && !List.of(roles).contains(operator.getRole())) {
-            throw new ApiFailure(403, "권한이 없습니다. / Permission denied.");
+        if (!operator.getRole().equals(ERole.ADMIN) && !List.of(roles).contains(operator.getRole())) {
+            throw new ApiFailure(HttpStatus.FORBIDDEN, "권한이 없습니다. / Permission denied.");
         }
     }
 
@@ -313,8 +333,9 @@ public class OperationsService {
 
     private boolean canReviewTicket(Account operator, Ticket ticket) {
         return (
-            (hasRole(operator, ERole.CONTENT) && ticket.getKind().equals(com.pickview.domain.ETicketKind.REPORT)) ||
-            (hasRole(operator, ERole.SUPPORT) && List.of(com.pickview.domain.ETicketKind.SUPPORT, com.pickview.domain.ETicketKind.REFUND).contains(ticket.getKind()))
+            (hasRole(operator, ERole.CONTENT) && ticket.getKind().equals(ETicketKind.REPORT)) ||
+            (hasRole(operator, ERole.SUPPORT) &&
+                List.of(ETicketKind.SUPPORT, ETicketKind.REFUND).contains(ticket.getKind()))
         );
     }
 

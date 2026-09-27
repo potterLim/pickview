@@ -1,15 +1,16 @@
 package com.pickview.api;
 
-import com.pickview.media.MediaService;
-import com.pickview.domain.ProductId;
 import com.pickview.domain.AccountId;
+import com.pickview.domain.ProductId;
 import com.pickview.domain.VideoDuration;
+import com.pickview.media.MediaService;
 import com.pickview.media.ThumbnailService;
 import com.pickview.security.AccountService;
 import java.nio.file.Path;
 import java.security.Principal;
 import java.util.Map;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -52,19 +53,31 @@ public class MediaController {
         @RequestParam MultipartFile file,
         @RequestParam double previewSeconds
     ) throws Exception {
-        mMedia.uploadVideo(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id), file, new VideoDuration(previewSeconds));
+        mMedia.uploadVideo(
+            mAccounts.requireAccount(new AccountId(principal.getName())),
+            new ProductId(id),
+            file,
+            new VideoDuration(previewSeconds)
+        );
     }
 
     @PostMapping("/api/media/ticket/{id}")
     public Map<String, String> issueTicket(Principal principal, @PathVariable String id) {
-        return Map.of("path", "/api/media/stream/" + mMedia.issueTicket(new AccountId(principal.getName()), new ProductId(id)));
+        return Map.of(
+            "path",
+            "/api/media/stream/" + mMedia.issueTicket(new AccountId(principal.getName()), new ProductId(id))
+        );
     }
 
     @PostMapping("/api/media/review/{id}")
     public Map<String, String> issueReviewTicket(Principal principal, @PathVariable String id) {
         return Map.of(
             "path",
-            "/api/media/stream/" + mMedia.issueReviewTicket(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id))
+            "/api/media/stream/" +
+                mMedia.issueReviewTicket(
+                    mAccounts.requireAccount(new AccountId(principal.getName())),
+                    new ProductId(id)
+                )
         );
     }
 
@@ -80,7 +93,7 @@ public class MediaController {
 
     private ResponseEntity<FileSystemResource> serveVideo(Path file) {
         if (!java.nio.file.Files.exists(file)) {
-            throw new ApiFailure(404, "Demo media has not been prepared. Run media setup.");
+            throw new ApiFailure(HttpStatus.NOT_FOUND, "Demo media has not been prepared. Run media setup.");
         }
         return ResponseEntity.ok()
             .header("Cache-Control", "private, no-store")

@@ -1,5 +1,10 @@
 package com.pickview.config;
 
+import com.pickview.domain.ECategory;
+import com.pickview.domain.EProductKind;
+import com.pickview.domain.EProductStatus;
+import com.pickview.domain.ERole;
+import com.pickview.domain.ESellerStatus;
 import com.pickview.model.Account;
 import com.pickview.model.Product;
 import com.pickview.repository.IAccountRepository;
@@ -101,15 +106,15 @@ public class DemoData implements CommandLineRunner {
                 "seller",
                 "처음 시작하는 크리에이터 패키지",
                 "두 편으로 시작하는 창작. / Two videos to begin creating.",
-                com.pickview.domain.ECategory.EDUCATION,
+                ECategory.EDUCATION,
                 5000,
                 30,
-                com.pickview.domain.EProductStatus.APPROVED,
+                EProductStatus.APPROVED,
                 "studio",
                 "",
                 "",
                 60,
-                com.pickview.domain.EProductKind.BUNDLE,
+                EProductKind.BUNDLE,
                 "video-4,video-5",
                 false,
                 System.currentTimeMillis()
@@ -124,8 +129,8 @@ public class DemoData implements CommandLineRunner {
                 id + "@pickview.demo",
                 mEncoder.encode(mPassword),
                 name,
-                com.pickview.domain.ERole.valueOf(role),
-                com.pickview.domain.ESellerStatus.valueOf(status),
+                ERole.valueOf(role),
+                ESellerStatus.valueOf(status),
                 "매일의 작은 발견을 영상으로 전합니다. / Thoughtful videos for curious minds.",
                 "ko",
                 "EDUCATION"
@@ -141,15 +146,15 @@ public class DemoData implements CommandLineRunner {
                 title,
                 english +
                     "\n\n이 상품은 기능 시연용 샘플입니다. 재생 영상은 공통 데모 클립입니다. / Sample product with a shared demo clip.",
-                com.pickview.domain.ECategory.valueOf(category),
+                ECategory.valueOf(category),
                 price,
                 30,
-                com.pickview.domain.EProductStatus.APPROVED,
+                EProductStatus.APPROVED,
                 thumbnail,
                 "demo.mp4",
                 "demo-preview.mp4",
                 30,
-                com.pickview.domain.EProductKind.VIDEO,
+                EProductKind.VIDEO,
                 "",
                 false,
                 System.currentTimeMillis()

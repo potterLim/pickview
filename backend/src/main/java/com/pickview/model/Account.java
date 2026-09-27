@@ -1,8 +1,7 @@
 package com.pickview.model;
 
-import com.pickview.domain.ESellerStatus;
-
 import com.pickview.domain.ERole;
+import com.pickview.domain.ESellerStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

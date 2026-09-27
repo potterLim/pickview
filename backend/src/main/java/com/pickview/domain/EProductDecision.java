@@ -4,5 +4,5 @@ public enum EProductDecision {
     APPROVE,
     REJECT,
     WITHDRAW,
-    BLOCK
+    BLOCK,
 }

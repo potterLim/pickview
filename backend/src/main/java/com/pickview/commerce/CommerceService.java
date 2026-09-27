@@ -5,8 +5,10 @@ import com.pickview.catalog.CatalogService;
 import com.pickview.domain.AccountId;
 import com.pickview.domain.EAccessTerm;
 import com.pickview.domain.EFeeRate;
+import com.pickview.domain.EOrderStatus;
 import com.pickview.domain.EPaymentChannel;
 import com.pickview.domain.EPaymentOutcome;
+import com.pickview.domain.EProductStatus;
 import com.pickview.domain.ProductId;
 import com.pickview.domain.WonAmount;
 import com.pickview.model.Account;
@@ -26,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -83,7 +86,7 @@ public class CommerceService {
             request.channel() == null ||
             request.outcome() == null
         ) {
-            throw new ApiFailure(400, "결제 요청을 확인하세요. / Invalid checkout.");
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "결제 요청을 확인하세요. / Invalid checkout.");
         }
         List<Product> products = request.productIds().stream().map(mCatalog::requireProduct).toList();
         validateCart(buyer, products);
@@ -92,8 +95,8 @@ public class CommerceService {
                 UUID.randomUUID().toString(),
                 buyer.getId(),
                 request.requestKey(),
-                com.pickview.domain.EOrderStatus.valueOf(request.outcome().name()),
-                com.pickview.domain.EPaymentChannel.valueOf(request.channel().name()),
+                EOrderStatus.valueOf(request.outcome().name()),
+                EPaymentChannel.valueOf(request.channel().name()),
                 System.currentTimeMillis()
             )
         );
@@ -176,11 +179,14 @@ public class CommerceService {
         Set<ProductId> videoIds = new HashSet<>();
         for (Product product : products) {
             if (
-                !product.getStatus().equals(com.pickview.domain.EProductStatus.APPROVED) ||
+                !product.getStatus().equals(EProductStatus.APPROVED) ||
                 product.isBlocked() ||
                 product.getSellerId().equals(buyer.getId())
             ) {
-                throw new ApiFailure(409, "구매할 수 없는 상품입니다. / Product unavailable or self purchase.");
+                throw new ApiFailure(
+                    HttpStatus.CONFLICT,
+                    "구매할 수 없는 상품입니다. / Product unavailable or self purchase."
+                );
             }
             for (ProductId videoId : mCatalog.expandVideoIds(product)) {
                 if (
@@ -189,7 +195,7 @@ public class CommerceService {
                     canWatch(new AccountId(buyer.getId()), videoId)
                 ) {
                     throw new ApiFailure(
-                        409,
+                        HttpStatus.CONFLICT,
                         "중복되거나 이용할 수 없는 영상입니다. / Duplicate or unavailable video."
                     );
                 }
@@ -218,10 +224,19 @@ public class CommerceService {
                 ""
             )
         );
-        long expiresAt = EAccessTerm.parseDays(product.getTermDays()).calculateExpiry(java.time.Instant.ofEpochMilli(purchase.getCreatedAt()));
+        long expiresAt = EAccessTerm.parseDays(product.getTermDays()).calculateExpiry(
+            java.time.Instant.ofEpochMilli(purchase.getCreatedAt())
+        );
         for (ProductId videoId : mCatalog.expandVideoIds(product)) {
             mGrants.save(
-                new Grant(UUID.randomUUID().toString(), buyer.getId(), videoId.getValue(), line.getId(), expiresAt, false)
+                new Grant(
+                    UUID.randomUUID().toString(),
+                    buyer.getId(),
+                    videoId.getValue(),
+                    line.getId(),
+                    expiresAt,
+                    false
+                )
             );
         }
     }
@@ -233,12 +248,22 @@ public class CommerceService {
         @NotNull EPaymentOutcome outcome
     ) {
         public CheckoutRequest {
-            if (requestKey == null || requestKey.isBlank() || requestKey.length() > 100 || channel == null || outcome == null) {
-                throw new ApiFailure(400, "Invalid checkout request");
+            if (
+                requestKey == null ||
+                requestKey.isBlank() ||
+                requestKey.length() > 100 ||
+                channel == null ||
+                outcome == null
+            ) {
+                throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid checkout request");
             }
-            if (productIds == null || productIds.isEmpty() || productIds.size() > 30
-                || productIds.stream().anyMatch(java.util.Objects::isNull)) {
-                throw new ApiFailure(400, "Invalid product selection");
+            if (
+                productIds == null ||
+                productIds.isEmpty() ||
+                productIds.size() > 30 ||
+                productIds.stream().anyMatch(java.util.Objects::isNull)
+            ) {
+                throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid product selection");
             }
             productIds = List.copyOf(productIds);
         }
@@ -259,7 +284,7 @@ public class CommerceService {
 
     public record OrderView(
         String id,
-        com.pickview.domain.EOrderStatus status,
+        EOrderStatus status,
         EPaymentChannel channel,
         long createdAt,
         List<LineView> lines,

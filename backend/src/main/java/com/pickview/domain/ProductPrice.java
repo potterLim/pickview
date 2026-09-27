@@ -3,6 +3,7 @@ package com.pickview.domain;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.pickview.api.ApiFailure;
+import org.springframework.http.HttpStatus;
 
 public final class ProductPrice {
 
@@ -13,9 +14,8 @@ public final class ProductPrice {
 
     @JsonCreator
     public ProductPrice(int won) {
-        if (won < 0 || won > MAX_PRICE_WON
-            || (won != 0 && (won < MIN_PAID_PRICE_WON || won % PRICE_STEP_WON != 0))) {
-            throw new ApiFailure(400, "Invalid product price");
+        if (won < 0 || won > MAX_PRICE_WON || (won != 0 && (won < MIN_PAID_PRICE_WON || won % PRICE_STEP_WON != 0))) {
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid product price");
         }
         mAmount = new WonAmount(won);
     }

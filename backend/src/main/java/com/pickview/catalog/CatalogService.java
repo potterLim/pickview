@@ -5,7 +5,9 @@ import com.pickview.domain.AccountId;
 import com.pickview.domain.EAccessTerm;
 import com.pickview.domain.ECategory;
 import com.pickview.domain.EProductKind;
+import com.pickview.domain.EProductStatus;
 import com.pickview.domain.EPublicationAction;
+import com.pickview.domain.ESellerStatus;
 import com.pickview.domain.ProductId;
 import com.pickview.domain.ProductPrice;
 import com.pickview.domain.WonAmount;
@@ -16,16 +18,17 @@ import com.pickview.repository.IAccountRepository;
 import com.pickview.repository.IAuditRepository;
 import com.pickview.repository.IEngagementRepository;
 import com.pickview.repository.IOrderLineRepository;
-import com.pickview.repository.IProductRepository;
 import com.pickview.repository.IProductRating;
+import com.pickview.repository.IProductRepository;
 import com.pickview.repository.IProductSales;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import jakarta.validation.constraints.NotNull;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,18 +58,27 @@ public class CatalogService {
     public Product requireProduct(ProductId id) {
         return mProducts
             .findById(id.getValue())
-            .orElseThrow(() -> new ApiFailure(404, "영상을 찾을 수 없습니다. / Video not found."));
+            .orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "영상을 찾을 수 없습니다. / Video not found."));
     }
 
     public List<ProductView> listPublished() {
-        return describeProducts(mProducts.findAll().stream()
-            .filter(product -> product.getStatus().equals(com.pickview.domain.EProductStatus.APPROVED) && !product.isBlocked())
-            .toList());
+        return describeProducts(
+            mProducts
+                .findAll()
+                .stream()
+                .filter(product -> product.getStatus().equals(EProductStatus.APPROVED) && !product.isBlocked())
+                .toList()
+        );
     }
 
     public List<ProductView> listOwned(AccountId sellerId) {
-        return describeProducts(mProducts.findAll().stream()
-            .filter(product -> product.getSellerId().equals(sellerId.getValue())).toList());
+        return describeProducts(
+            mProducts
+                .findAll()
+                .stream()
+                .filter(product -> product.getSellerId().equals(sellerId.getValue()))
+                .toList()
+        );
     }
 
     public ProductView describeProduct(Product product) {
@@ -78,17 +90,37 @@ public class CatalogService {
             return List.of();
         }
         List<String> ids = products.stream().map(Product::getId).toList();
-        Map<String, Account> sellersById = mAccounts.findAllById(products.stream().map(Product::getSellerId).distinct().toList())
-            .stream().collect(Collectors.toMap(Account::getId, Function.identity()));
-        Map<String, IProductRating> ratingsById = mEngagements.summarizeReviews(ids).stream()
+        Map<String, Account> sellersById = mAccounts
+            .findAllById(products.stream().map(Product::getSellerId).distinct().toList())
+            .stream()
+            .collect(Collectors.toMap(Account::getId, Function.identity()));
+        Map<String, IProductRating> ratingsById = mEngagements
+            .summarizeReviews(ids)
+            .stream()
             .collect(Collectors.toMap(IProductRating::getProductId, Function.identity()));
-        Map<String, IProductSales> salesById = mLines.summarizeSales(ids).stream()
+        Map<String, IProductSales> salesById = mLines
+            .summarizeSales(ids)
+            .stream()
             .collect(Collectors.toMap(IProductSales::getProductId, Function.identity()));
-        return products.stream().map(product -> createProductView(product, sellersById.get(product.getSellerId()),
-            ratingsById.get(product.getId()), salesById.get(product.getId()))).toList();
+        return products
+            .stream()
+            .map(product ->
+                createProductView(
+                    product,
+                    sellersById.get(product.getSellerId()),
+                    ratingsById.get(product.getId()),
+                    salesById.get(product.getId())
+                )
+            )
+            .toList();
     }
 
-    private ProductView createProductView(Product product, Account seller, IProductRating ratingOrNull, IProductSales salesOrNull) {
+    private ProductView createProductView(
+        Product product,
+        Account seller,
+        IProductRating ratingOrNull,
+        IProductSales salesOrNull
+    ) {
         return new ProductView(
             product.getId(),
             product.getSellerId(),
@@ -114,7 +146,7 @@ public class CatalogService {
     }
 
     public List<ProductId> expandVideoIds(Product product) {
-        if (product.getKind().equals(com.pickview.domain.EProductKind.VIDEO)) {
+        if (product.getKind().equals(EProductKind.VIDEO)) {
             return List.of(new ProductId(product.getId()));
         }
         return Arrays.stream(product.getBundleIds().split(","))
@@ -125,8 +157,8 @@ public class CatalogService {
 
     @Transactional
     public Product createProduct(Account seller, ProductRequest request) {
-        if (!seller.getSellerStatus().equals(com.pickview.domain.ESellerStatus.APPROVED)) {
-            throw new ApiFailure(403, "판매자 승인이 필요합니다. / Seller approval required.");
+        if (!seller.getSellerStatus().equals(ESellerStatus.APPROVED)) {
+            throw new ApiFailure(HttpStatus.FORBIDDEN, "판매자 승인이 필요합니다. / Seller approval required.");
         }
         validateProduct(request);
         String bundleIds = "";
@@ -135,39 +167,52 @@ public class CatalogService {
                 request.videoIds().size() < 2 ||
                 request.videoIds().stream().distinct().count() != request.videoIds().size()
             ) {
-                throw new ApiFailure(400, "서로 다른 영상 2개 이상을 선택하세요. / Choose distinct videos.");
+                throw new ApiFailure(
+                    HttpStatus.BAD_REQUEST,
+                    "서로 다른 영상 2개 이상을 선택하세요. / Choose distinct videos."
+                );
             }
             int individualPrice = 0;
             for (ProductId id : request.videoIds()) {
                 Product video = requireProduct(id);
                 if (
                     !video.getSellerId().equals(seller.getId()) ||
-                    !video.getKind().equals(com.pickview.domain.EProductKind.VIDEO) ||
-                    !video.getStatus().equals(com.pickview.domain.EProductStatus.APPROVED)
+                    !video.getKind().equals(EProductKind.VIDEO) ||
+                    !video.getStatus().equals(EProductStatus.APPROVED)
                 ) {
-                    throw new ApiFailure(400, "본인의 승인된 영상만 묶을 수 있습니다. / Approved own videos only.");
+                    throw new ApiFailure(
+                        HttpStatus.BAD_REQUEST,
+                        "본인의 승인된 영상만 묶을 수 있습니다. / Approved own videos only."
+                    );
                 }
                 individualPrice += video.getPriceWon();
             }
             if (request.priceWon().getAmount().exceeds(new WonAmount(individualPrice))) {
-                throw new ApiFailure(400, "패키지는 개별 합계 이하로 설정하세요. / Bundle exceeds individual total.");
+                throw new ApiFailure(
+                    HttpStatus.BAD_REQUEST,
+                    "패키지는 개별 합계 이하로 설정하세요. / Bundle exceeds individual total."
+                );
             }
-            bundleIds = request.videoIds().stream().map(ProductId::getValue).collect(java.util.stream.Collectors.joining(","));
+            bundleIds = request
+                .videoIds()
+                .stream()
+                .map(ProductId::getValue)
+                .collect(java.util.stream.Collectors.joining(","));
         }
         Product product = new Product(
             UUID.randomUUID().toString(),
             seller.getId(),
             request.title(),
             request.description(),
-            com.pickview.domain.ECategory.valueOf(request.category().name()),
+            ECategory.valueOf(request.category().name()),
             request.priceWon().getWon(),
             request.termDays().getDays(),
-            com.pickview.domain.EProductStatus.DRAFT,
+            EProductStatus.DRAFT,
             request.thumbnail(),
             "",
             "",
             0,
-            com.pickview.domain.EProductKind.valueOf(request.kind().name()),
+            EProductKind.valueOf(request.kind().name()),
             bundleIds,
             false,
             System.currentTimeMillis()
@@ -182,19 +227,19 @@ public class CatalogService {
         validateProduct(request);
         if (
             !product.getKind().equals(request.kind()) ||
-            (product.getKind().equals(com.pickview.domain.EProductKind.BUNDLE) && !expandVideoIds(product).equals(request.videoIds()))
+            (product.getKind().equals(EProductKind.BUNDLE) && !expandVideoIds(product).equals(request.videoIds()))
         ) {
             throw new ApiFailure(
-                400,
+                HttpStatus.BAD_REQUEST,
                 "상품 유형과 패키지 구성은 변경할 수 없습니다. / Product composition is immutable."
             );
         }
         if (
-            product.getKind().equals(com.pickview.domain.EProductKind.BUNDLE) &&
+            product.getKind().equals(EProductKind.BUNDLE) &&
             request.priceWon().getWon() >
                 expandVideoIds(product).stream().map(this::requireProduct).mapToInt(Product::getPriceWon).sum()
         ) {
-            throw new ApiFailure(400, "Bundle exceeds individual total");
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "Bundle exceeds individual total");
         }
         product.revise(request.title(), request.description(), request.priceWon().getAmount(), request.termDays());
         product.changePresentation(request.category(), request.thumbnail());
@@ -219,10 +264,10 @@ public class CatalogService {
             return;
         }
         if (action != EPublicationAction.SUBMIT) {
-            throw new ApiFailure(400, "Invalid action");
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid action");
         }
-        if (product.getKind().equals(com.pickview.domain.EProductKind.VIDEO) && product.getMediaKey().isBlank()) {
-            throw new ApiFailure(400, "영상을 먼저 업로드하세요. / Upload a video first.");
+        if (product.getKind().equals(EProductKind.VIDEO) && product.getMediaKey().isBlank()) {
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "영상을 먼저 업로드하세요. / Upload a video first.");
         }
         product.submit();
     }
@@ -230,7 +275,7 @@ public class CatalogService {
     public Product requireOwnedProduct(Account seller, ProductId id) {
         Product product = requireProduct(id);
         if (!product.getSellerId().equals(seller.getId())) {
-            throw new ApiFailure(403, "본인의 상품만 변경할 수 있습니다. / Owner only.");
+            throw new ApiFailure(HttpStatus.FORBIDDEN, "본인의 상품만 변경할 수 있습니다. / Owner only.");
         }
         return product;
     }
@@ -241,13 +286,19 @@ public class CatalogService {
             request.title().length() > 150 ||
             request.description().length() > 10000 ||
             request.tags().length() > 300 ||
-            request.category() == null || request.kind() == null || request.termDays() == null || request.priceWon() == null ||
+            request.category() == null ||
+            request.kind() == null ||
+            request.termDays() == null ||
+            request.priceWon() == null ||
             !request.hasRights()
         ) {
-            throw new ApiFailure(400, "상품 정보와 권리 확인을 점검하세요. / Invalid product details.");
+            throw new ApiFailure(
+                HttpStatus.BAD_REQUEST,
+                "상품 정보와 권리 확인을 점검하세요. / Invalid product details."
+            );
         }
         if (!request.thumbnail().isEmpty() && !request.thumbnail().matches("[a-zA-Z0-9_-]+")) {
-            throw new ApiFailure(400, "Invalid thumbnail key");
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid thumbnail key");
         }
     }
 
@@ -264,12 +315,19 @@ public class CatalogService {
         String tags
     ) {
         public ProductRequest {
-            if (title == null || description == null || category == null || priceWon == null
-                || termDays == null || thumbnail == null || kind == null) {
-                throw new ApiFailure(400, "Missing product details");
+            if (
+                title == null ||
+                description == null ||
+                category == null ||
+                priceWon == null ||
+                termDays == null ||
+                thumbnail == null ||
+                kind == null
+            ) {
+                throw new ApiFailure(HttpStatus.BAD_REQUEST, "Missing product details");
             }
             if (videoIds == null || videoIds.stream().anyMatch(java.util.Objects::isNull)) {
-                throw new ApiFailure(400, "Invalid bundle selection");
+                throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid bundle selection");
             }
             videoIds = List.copyOf(videoIds);
             tags = tags == null ? "" : tags.strip();
@@ -285,7 +343,7 @@ public class CatalogService {
         ECategory category,
         int priceWon,
         int termDays,
-        com.pickview.domain.EProductStatus status,
+        EProductStatus status,
         String thumbnail,
         double durationSeconds,
         EProductKind kind,

@@ -3,6 +3,7 @@ package com.pickview.domain;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.pickview.api.ApiFailure;
+import org.springframework.http.HttpStatus;
 
 public final class WonAmount {
 
@@ -12,7 +13,7 @@ public final class WonAmount {
     @JsonCreator
     public WonAmount(int won) {
         if (won < 0) {
-            throw new ApiFailure(400, "Amount cannot be negative");
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "Amount cannot be negative");
         }
         mWon = won;
     }
@@ -31,7 +32,7 @@ public final class WonAmount {
     }
 
     public WonAmount calculateFee(EFeeRate rate) {
-        return new WonAmount(Math.toIntExact((long) mWon * rate.getPercent() / PERCENT_DENOMINATOR));
+        return new WonAmount(Math.toIntExact(((long) mWon * rate.getPercent()) / PERCENT_DENOMINATOR));
     }
 
     public boolean exceeds(WonAmount other) {

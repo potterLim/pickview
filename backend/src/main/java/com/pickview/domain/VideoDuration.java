@@ -1,6 +1,7 @@
 package com.pickview.domain;
 
 import com.pickview.api.ApiFailure;
+import org.springframework.http.HttpStatus;
 
 public final class VideoDuration {
 
@@ -11,7 +12,7 @@ public final class VideoDuration {
 
     public VideoDuration(double seconds) {
         if (!Double.isFinite(seconds) || seconds <= 0 || seconds > MAX_VIDEO_SECONDS) {
-            throw new ApiFailure(400, "Video duration must be positive and at most 600 seconds");
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "Video duration must be positive and at most 600 seconds");
         }
         mSeconds = seconds;
     }
@@ -22,7 +23,10 @@ public final class VideoDuration {
 
     public void requireValidPreview(VideoDuration preview) {
         if (preview.mSeconds > Math.min(MAX_PREVIEW_SECONDS, mSeconds * MAX_PREVIEW_FRACTION)) {
-            throw new ApiFailure(400, "미리보기는 전체의 20% 이내, 최대 60초입니다. / Preview limit exceeded.");
+            throw new ApiFailure(
+                HttpStatus.BAD_REQUEST,
+                "미리보기는 전체의 20% 이내, 최대 60초입니다. / Preview limit exceeded."
+            );
         }
     }
 }

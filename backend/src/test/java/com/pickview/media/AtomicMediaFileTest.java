@@ -17,19 +17,25 @@ class AtomicMediaFileTest {
     void failedCopyPreservesPublishedFileAndRemovesStagingFile(@TempDir Path directory) throws Exception {
         Path destination = directory.resolve("video.mp4");
         Files.writeString(destination, "complete");
-        try (InputStream broken = new InputStream() {
-            @Override
-            public int read() throws IOException {
-                throw new IOException("Interrupted download");
+        try (
+            InputStream broken = new InputStream() {
+                @Override
+                public int read() throws IOException {
+                    throw new IOException("Interrupted download");
+                }
             }
-        }) {
+        ) {
             assertThrows(IOException.class, () -> AtomicMediaFile.publish(broken, destination));
         }
         assertEquals("complete", Files.readString(destination));
         try (java.util.stream.Stream<Path> files = Files.list(directory)) {
             assertEquals(1, files.count());
         }
-        try (InputStream replacement = new ByteArrayInputStream("replacement".getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
+        try (
+            InputStream replacement = new ByteArrayInputStream(
+                "replacement".getBytes(java.nio.charset.StandardCharsets.UTF_8)
+            )
+        ) {
             AtomicMediaFile.publish(replacement, destination);
         }
         assertEquals("replacement", Files.readString(destination));

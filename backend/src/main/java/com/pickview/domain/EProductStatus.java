@@ -5,5 +5,5 @@ public enum EProductStatus {
     PENDING,
     APPROVED,
     REJECTED,
-    WITHDRAWN
+    WITHDRAWN,
 }

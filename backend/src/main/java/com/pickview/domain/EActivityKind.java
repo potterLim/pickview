@@ -7,5 +7,5 @@ public enum EActivityKind {
     PROGRESS,
     REVIEW,
     CART,
-    NOTIFY
+    NOTIFY,
 }

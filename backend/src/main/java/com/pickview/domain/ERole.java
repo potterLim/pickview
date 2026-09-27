@@ -5,5 +5,5 @@ public enum ERole {
     ADMIN,
     CONTENT,
     SUPPORT,
-    FINANCE
+    FINANCE,
 }

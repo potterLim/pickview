@@ -3,6 +3,7 @@ package com.pickview.domain;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.pickview.api.ApiFailure;
+import org.springframework.http.HttpStatus;
 
 public final class OrderLineId {
 
@@ -11,7 +12,7 @@ public final class OrderLineId {
     @JsonCreator
     public OrderLineId(String value) {
         if (value == null || value.isBlank() || value.length() > 64) {
-            throw new ApiFailure(400, "Invalid OrderLineId");
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid OrderLineId");
         }
         mValue = value;
     }

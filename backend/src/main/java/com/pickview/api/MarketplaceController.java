@@ -5,11 +5,13 @@ import com.pickview.commerce.CommerceService;
 import com.pickview.community.CommunityService;
 import com.pickview.domain.AccountId;
 import com.pickview.domain.EActivityKind;
-import com.pickview.domain.TicketId;
+import com.pickview.domain.EProductStatus;
 import com.pickview.domain.EPublicationAction;
+import com.pickview.domain.ESellerStatus;
 import com.pickview.domain.ESellerType;
 import com.pickview.domain.NoticeId;
 import com.pickview.domain.ProductId;
+import com.pickview.domain.TicketId;
 import com.pickview.model.Account;
 import com.pickview.model.Product;
 import com.pickview.repository.IOrderLineRepository;
@@ -19,6 +21,7 @@ import jakarta.validation.constraints.NotNull;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -59,8 +62,8 @@ public class MarketplaceController {
     @GetMapping("/api/public/products/{id}")
     public CatalogService.ProductView getProduct(@PathVariable String id) {
         Product product = mCatalog.requireProduct(new ProductId(id));
-        if (!product.getStatus().equals(com.pickview.domain.EProductStatus.APPROVED) || product.isBlocked()) {
-            throw new ApiFailure(404, "Product unavailable");
+        if (!product.getStatus().equals(EProductStatus.APPROVED) || product.isBlocked()) {
+            throw new ApiFailure(HttpStatus.NOT_FOUND, "Product unavailable");
         }
         return mCatalog.describeProduct(product);
     }
@@ -138,9 +141,11 @@ public class MarketplaceController {
     @Transactional
     public void saveSettings(Principal principal, @Valid @RequestBody SettingsRequest request) {
         if (!List.of("ko", "en").contains(request.language()) || request.interests().length() > 100) {
-            throw new ApiFailure(400, "Invalid settings");
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid settings");
         }
-        mAccounts.requireAccount(new AccountId(principal.getName())).changeSettings(request.language(), request.interests());
+        mAccounts
+            .requireAccount(new AccountId(principal.getName()))
+            .changeSettings(request.language(), request.interests());
     }
 
     @PostMapping("/api/seller/apply")
@@ -152,11 +157,11 @@ public class MarketplaceController {
             request.bio().length() > 1000 ||
             request.type() == null
         ) {
-            throw new ApiFailure(400, "Invalid seller profile");
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid seller profile");
         }
         Account account = mAccounts.requireAccount(new AccountId(principal.getName()));
-        if (account.getSellerStatus().equals(com.pickview.domain.ESellerStatus.APPROVED)) {
-            throw new ApiFailure(409, "Already approved");
+        if (account.getSellerStatus().equals(ESellerStatus.APPROVED)) {
+            throw new ApiFailure(HttpStatus.CONFLICT, "Already approved");
         }
         account.applySeller(request.displayName(), request.type() + ": " + request.bio());
     }
@@ -170,11 +175,11 @@ public class MarketplaceController {
     @Transactional
     public void updateSellerProfile(Principal principal, @Valid @RequestBody SellerRequest request) {
         Account account = mAccounts.requireAccount(new AccountId(principal.getName()));
-        if (!account.getSellerStatus().equals(com.pickview.domain.ESellerStatus.APPROVED)) {
-            throw new ApiFailure(403, "Approved seller required");
+        if (!account.getSellerStatus().equals(ESellerStatus.APPROVED)) {
+            throw new ApiFailure(HttpStatus.FORBIDDEN, "Approved seller required");
         }
         if (request.displayName().isBlank() || request.displayName().length() > 80 || request.bio().length() > 1000) {
-            throw new ApiFailure(400, "Invalid profile");
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid profile");
         }
         account.changeProfile(request.displayName(), request.bio());
     }
@@ -184,7 +189,9 @@ public class MarketplaceController {
         Principal principal,
         @Valid @RequestBody CatalogService.ProductRequest request
     ) {
-        return mCatalog.describeProduct(mCatalog.createProduct(mAccounts.requireAccount(new AccountId(principal.getName())), request));
+        return mCatalog.describeProduct(
+            mCatalog.createProduct(mAccounts.requireAccount(new AccountId(principal.getName())), request)
+        );
     }
 
     @PutMapping("/api/seller/products/{id}")
@@ -193,12 +200,20 @@ public class MarketplaceController {
         @PathVariable String id,
         @Valid @RequestBody CatalogService.ProductRequest request
     ) {
-        mCatalog.updateProduct(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id), request);
+        mCatalog.updateProduct(
+            mAccounts.requireAccount(new AccountId(principal.getName())),
+            new ProductId(id),
+            request
+        );
     }
 
     @PostMapping("/api/seller/products/{id}/{action}")
     public void publish(Principal principal, @PathVariable String id, @PathVariable EPublicationAction action) {
-        mCatalog.changePublication(mAccounts.requireAccount(new AccountId(principal.getName())), new ProductId(id), action);
+        mCatalog.changePublication(
+            mAccounts.requireAccount(new AccountId(principal.getName())),
+            new ProductId(id),
+            action
+        );
     }
 
     @GetMapping("/api/seller/sales")

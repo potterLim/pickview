@@ -1,13 +1,15 @@
 package com.pickview.api;
 
+import com.pickview.domain.ERole;
+import com.pickview.domain.ESellerStatus;
 import com.pickview.model.Account;
 
 public record UserView(
     String id,
     String email,
     String displayName,
-    com.pickview.domain.ERole role,
-    com.pickview.domain.ESellerStatus sellerStatus,
+    ERole role,
+    ESellerStatus sellerStatus,
     String bio,
     String language,
     String interests

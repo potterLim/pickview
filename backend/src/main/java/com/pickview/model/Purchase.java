@@ -1,9 +1,7 @@
 package com.pickview.model;
 
-import com.pickview.domain.EPaymentChannel;
-
 import com.pickview.domain.EOrderStatus;
-
+import com.pickview.domain.EPaymentChannel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -41,7 +39,14 @@ public class Purchase {
         // Required by JPA; application code uses the complete constructor.
     }
 
-    public Purchase(String id, String buyerId, String requestKey, EOrderStatus status, EPaymentChannel channel, long createdAt) {
+    public Purchase(
+        String id,
+        String buyerId,
+        String requestKey,
+        EOrderStatus status,
+        EPaymentChannel channel,
+        long createdAt
+    ) {
         mId = id;
         mBuyerId = buyerId;
         mRequestKey = requestKey;

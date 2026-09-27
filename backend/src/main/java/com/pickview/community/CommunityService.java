@@ -6,6 +6,7 @@ import com.pickview.commerce.CommerceService;
 import com.pickview.domain.AccountId;
 import com.pickview.domain.EActivityKind;
 import com.pickview.domain.ETicketKind;
+import com.pickview.domain.ETicketStatus;
 import com.pickview.domain.NoticeId;
 import com.pickview.domain.ProductId;
 import com.pickview.domain.TicketId;
@@ -23,6 +24,7 @@ import com.pickview.repository.ITicketRepository;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,36 +70,34 @@ public class CommunityService {
         return mEngagements
             .findAll()
             .stream()
-            .filter(item -> item.getTargetId().equals(productId.getValue()) && item.getKind().equals(com.pickview.domain.EActivityKind.REVIEW))
+            .filter(
+                item -> item.getTargetId().equals(productId.getValue()) && item.getKind().equals(EActivityKind.REVIEW)
+            )
             .map(this::describeActivity)
             .toList();
     }
 
     @Transactional
     public void saveActivity(Account account, ActivityRequest request) {
-        if (
-            request.kind() == null ||
-            request.content().length() > 2000 ||
-            !Double.isFinite(request.numberValue())
-        ) {
-            throw new ApiFailure(400, "Invalid activity");
+        if (request.kind() == null || request.content().length() > 2000 || !Double.isFinite(request.numberValue())) {
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid activity");
         }
         if (List.of(EActivityKind.FOLLOW, EActivityKind.BLOCK, EActivityKind.NOTIFY).contains(request.kind())) {
             if (mAccounts.findById(request.targetId()).isEmpty() || account.getId().equals(request.targetId())) {
-                throw new ApiFailure(400, "Invalid account target");
+                throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid account target");
             }
         } else {
             mCatalog.requireProduct(new ProductId(request.targetId()));
         }
         if (request.kind().equals(EActivityKind.PROGRESS)) {
             if (!mCommerce.canWatch(new AccountId(account.getId()), new ProductId(request.targetId()))) {
-                throw new ApiFailure(403, "구매 후 이용 가능합니다. / Purchase required.");
+                throw new ApiFailure(HttpStatus.FORBIDDEN, "구매 후 이용 가능합니다. / Purchase required.");
             }
             if (
                 request.numberValue() < 0 ||
                 request.numberValue() > mCatalog.requireProduct(new ProductId(request.targetId())).getDurationSeconds()
             ) {
-                throw new ApiFailure(400, "Invalid playback position");
+                throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid playback position");
             }
         }
         if (request.kind().equals(EActivityKind.REVIEW)) {
@@ -111,7 +111,10 @@ public class CommunityService {
                         !line.isRefunded()
                 );
             if (!hasPurchase || request.numberValue() < 1 || request.numberValue() > 5 || request.content().isBlank()) {
-                throw new ApiFailure(403, "구매자만 1~5점 후기를 작성할 수 있습니다. / Verified purchase required.");
+                throw new ApiFailure(
+                    HttpStatus.FORBIDDEN,
+                    "구매자만 1~5점 후기를 작성할 수 있습니다. / Verified purchase required."
+                );
             }
         }
         Engagement item = mEngagements
@@ -129,7 +132,7 @@ public class CommunityService {
                     UUID.randomUUID().toString(),
                     account.getId(),
                     request.targetId(),
-                    com.pickview.domain.EActivityKind.valueOf(request.kind().name()),
+                    EActivityKind.valueOf(request.kind().name()),
                     "",
                     0,
                     0
@@ -157,26 +160,25 @@ public class CommunityService {
 
     @Transactional
     public void createTicket(Account account, TicketRequest request) {
-        if (
-            request.kind() == null ||
-            request.message().isBlank() ||
-            request.message().length() > 4000
-        ) {
-            throw new ApiFailure(400, "문의 내용을 확인하세요. / Check your message.");
+        if (request.kind() == null || request.message().isBlank() || request.message().length() > 4000) {
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "문의 내용을 확인하세요. / Check your message.");
         }
         String recipient = "";
         if (request.kind().equals(ETicketKind.INQUIRY) || request.kind().equals(ETicketKind.REPORT)) {
             recipient = mCatalog.requireProduct(new ProductId(request.targetId())).getSellerId();
         }
-        if (request.kind().equals(ETicketKind.INQUIRY) && isBlocked(new AccountId(account.getId()), new AccountId(recipient))) {
-            throw new ApiFailure(403, "차단한 계정과는 문의할 수 없습니다. / Inquiry blocked.");
+        if (
+            request.kind().equals(ETicketKind.INQUIRY) &&
+            isBlocked(new AccountId(account.getId()), new AccountId(recipient))
+        ) {
+            throw new ApiFailure(HttpStatus.FORBIDDEN, "차단한 계정과는 문의할 수 없습니다. / Inquiry blocked.");
         }
         if (request.kind().equals(ETicketKind.REFUND)) {
             OrderLine line = mLines
                 .findById(request.targetId())
-                .orElseThrow(() -> new ApiFailure(404, "Order not found"));
+                .orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Order not found"));
             if (!line.getBuyerId().equals(account.getId()) || line.isRefunded()) {
-                throw new ApiFailure(403, "Invalid refund target");
+                throw new ApiFailure(HttpStatus.FORBIDDEN, "Invalid refund target");
             }
             if (
                 mTickets
@@ -184,12 +186,12 @@ public class CommunityService {
                     .stream()
                     .anyMatch(
                         ticket ->
-                            ticket.getKind().equals(com.pickview.domain.ETicketKind.REFUND) &&
+                            ticket.getKind().equals(ETicketKind.REFUND) &&
                             ticket.getTargetId().equals(line.getId()) &&
-                            ticket.getStatus().equals(com.pickview.domain.ETicketStatus.OPEN)
+                            ticket.getStatus().equals(ETicketStatus.OPEN)
                     )
             ) {
-                throw new ApiFailure(409, "이미 요청했습니다. / Already requested.");
+                throw new ApiFailure(HttpStatus.CONFLICT, "이미 요청했습니다. / Already requested.");
             }
         }
         mTickets.save(
@@ -198,9 +200,9 @@ public class CommunityService {
                 account.getId(),
                 request.targetId(),
                 recipient,
-                com.pickview.domain.ETicketKind.valueOf(request.kind().name()),
+                ETicketKind.valueOf(request.kind().name()),
                 request.message(),
-                com.pickview.domain.ETicketStatus.OPEN,
+                ETicketStatus.OPEN,
                 "",
                 System.currentTimeMillis()
             )
@@ -214,7 +216,7 @@ public class CommunityService {
             .filter(
                 ticket ->
                     ticket.getUserId().equals(userId.getValue()) ||
-                    (ticket.getKind().equals(com.pickview.domain.ETicketKind.INQUIRY) && ticket.getRecipientId().equals(userId.getValue()))
+                    (ticket.getKind().equals(ETicketKind.INQUIRY) && ticket.getRecipientId().equals(userId.getValue()))
             )
             .map(this::describeTicket)
             .toList();
@@ -222,19 +224,21 @@ public class CommunityService {
 
     @Transactional
     public void replyToInquiry(AccountId userId, TicketId ticketId, String reply) {
-        Ticket ticket = mTickets.findById(ticketId.getValue()).orElseThrow(() -> new ApiFailure(404, "Ticket not found"));
+        Ticket ticket = mTickets
+            .findById(ticketId.getValue())
+            .orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Ticket not found"));
         if (
-            !ticket.getKind().equals(com.pickview.domain.ETicketKind.INQUIRY) ||
+            !ticket.getKind().equals(ETicketKind.INQUIRY) ||
             !ticket.getRecipientId().equals(userId.getValue()) ||
             reply.isBlank() ||
             reply.length() > 4000
         ) {
-            throw new ApiFailure(403, "판매자만 답변할 수 있습니다. / Seller only.");
+            throw new ApiFailure(HttpStatus.FORBIDDEN, "판매자만 답변할 수 있습니다. / Seller only.");
         }
         if (isBlocked(userId, new AccountId(ticket.getUserId()))) {
-            throw new ApiFailure(403, "Inquiry blocked");
+            throw new ApiFailure(HttpStatus.FORBIDDEN, "Inquiry blocked");
         }
-        ticket.resolve(reply, com.pickview.domain.ETicketStatus.RESOLVED);
+        ticket.resolve(reply, ETicketStatus.RESOLVED);
         notifyUser(new AccountId(ticket.getUserId()), "문의 답변이 도착했습니다. / Your inquiry has a reply.");
     }
 
@@ -249,22 +253,28 @@ public class CommunityService {
 
     @Transactional
     public void readNotice(AccountId userId, NoticeId id) {
-        Notice notice = mNotices.findById(id.getValue()).orElseThrow(() -> new ApiFailure(404, "Notice not found"));
+        Notice notice = mNotices
+            .findById(id.getValue())
+            .orElseThrow(() -> new ApiFailure(HttpStatus.NOT_FOUND, "Notice not found"));
         if (!notice.getUserId().equals(userId.getValue())) {
-            throw new ApiFailure(403, "Owner only");
+            throw new ApiFailure(HttpStatus.FORBIDDEN, "Owner only");
         }
         notice.markRead();
     }
 
     public void notifyUser(AccountId userId, String message) {
-        mNotices.save(new Notice(UUID.randomUUID().toString(), userId.getValue(), message, false, System.currentTimeMillis()));
+        mNotices.save(
+            new Notice(UUID.randomUUID().toString(), userId.getValue(), message, false, System.currentTimeMillis())
+        );
     }
 
     public void notifyPublication(Product product) {
         mEngagements
             .findAll()
             .stream()
-            .filter(item -> item.getKind().equals(com.pickview.domain.EActivityKind.NOTIFY) && item.getTargetId().equals(product.getSellerId()))
+            .filter(
+                item -> item.getKind().equals(EActivityKind.NOTIFY) && item.getTargetId().equals(product.getSellerId())
+            )
             .filter(item -> !isBlocked(new AccountId(item.getUserId()), new AccountId(product.getSellerId())))
             .forEach(item -> notifyUser(new AccountId(item.getUserId()), "새 영상 / New video: " + product.getTitle()));
     }
@@ -275,7 +285,7 @@ public class CommunityService {
             .stream()
             .anyMatch(
                 item ->
-                    item.getKind().equals(com.pickview.domain.EActivityKind.BLOCK) &&
+                    item.getKind().equals(EActivityKind.BLOCK) &&
                     ((item.getUserId().equals(first.getValue()) && item.getTargetId().equals(second.getValue())) ||
                         (item.getUserId().equals(second.getValue()) && item.getTargetId().equals(first.getValue())))
             );
@@ -332,7 +342,7 @@ public class CommunityService {
         String recipientId,
         ETicketKind kind,
         String message,
-        com.pickview.domain.ETicketStatus status,
+        ETicketStatus status,
         String reply,
         long createdAt
     ) {}

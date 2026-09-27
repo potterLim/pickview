@@ -4,5 +4,5 @@ public enum EOrderStatus {
     SUCCESS,
     FAILED,
     CANCELED,
-    REFUNDED
+    REFUNDED,
 }

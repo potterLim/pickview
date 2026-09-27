@@ -1,9 +1,9 @@
 package com.pickview.api;
 
-import com.pickview.domain.Password;
-import com.pickview.domain.EmailAddress;
-import com.pickview.security.AccountService;
 import com.pickview.domain.AccountId;
+import com.pickview.domain.EmailAddress;
+import com.pickview.domain.Password;
+import com.pickview.security.AccountService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -37,7 +37,12 @@ public class AuthController {
 
     @PostMapping("/api/auth/register")
     public Map<String, String> register(@Valid @RequestBody RegisterRequest request) {
-        mAccounts.register(new EmailAddress(request.email()), new Password(request.password()), request.name(), request.isAdult());
+        mAccounts.register(
+            new EmailAddress(request.email()),
+            new Password(request.password()),
+            request.name(),
+            request.isAdult()
+        );
         return Map.of("token", mAccounts.login(new EmailAddress(request.email()), new Password(request.password())));
     }
 
@@ -59,5 +64,4 @@ public class AuthController {
         @NotBlank @Size(max = 80) String name,
         boolean isAdult
     ) {}
-
 }

@@ -4,5 +4,5 @@ public enum ETicketKind {
     INQUIRY,
     SUPPORT,
     REPORT,
-    REFUND
+    REFUND,
 }

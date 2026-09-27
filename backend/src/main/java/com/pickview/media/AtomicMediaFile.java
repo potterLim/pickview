@@ -16,7 +16,12 @@ final class AtomicMediaFile {
         try (TemporaryFile temporary = new TemporaryFile(destination.getParent(), "pickview-cache-")) {
             Files.copy(source, temporary.getPath(), StandardCopyOption.REPLACE_EXISTING);
             // Same-directory staging keeps incomplete files invisible to readers.
-            Files.move(temporary.getPath(), destination, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            Files.move(
+                temporary.getPath(),
+                destination,
+                StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING
+            );
         }
     }
 }

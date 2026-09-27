@@ -3,6 +3,8 @@ package com.pickview.config;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pickview.domain.EAccessTerm;
+import com.pickview.domain.ECategory;
+import com.pickview.domain.EProductStatus;
 import com.pickview.domain.WonAmount;
 import com.pickview.model.Product;
 import com.pickview.repository.IProductRepository;
@@ -52,14 +54,17 @@ public class DemoContentUpgrade implements CommandLineRunner {
         if (!product.getMediaKey().equals("demo.mp4")) {
             return;
         }
-        com.pickview.domain.EProductStatus status = product.getStatus();
+        EProductStatus status = product.getStatus();
         product.revise(
             content.path("title").asText(),
             content.path("description").asText(),
             new WonAmount(product.getPriceWon()),
             EAccessTerm.parseDays(product.getTermDays())
         );
-        product.changePresentation(com.pickview.domain.ECategory.valueOf(content.path("category").asText()), content.path("thumbnail").asText());
+        product.changePresentation(
+            ECategory.valueOf(content.path("category").asText()),
+            content.path("thumbnail").asText()
+        );
         product.changeTags(content.path("tags").asText());
         product.replaceMedia(
             "sample-" + product.getId() + ".mp4",

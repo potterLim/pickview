@@ -3,6 +3,7 @@ package com.pickview.domain;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.pickview.api.ApiFailure;
+import org.springframework.http.HttpStatus;
 
 public final class TicketId {
 
@@ -11,7 +12,7 @@ public final class TicketId {
     @JsonCreator
     public TicketId(String value) {
         if (value == null || value.isBlank() || value.length() > 64) {
-            throw new ApiFailure(400, "Invalid TicketId");
+            throw new ApiFailure(HttpStatus.BAD_REQUEST, "Invalid TicketId");
         }
         mValue = value;
     }

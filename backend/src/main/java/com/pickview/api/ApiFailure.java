@@ -1,15 +1,17 @@
 package com.pickview.api;
 
+import org.springframework.http.HttpStatus;
+
 public class ApiFailure extends RuntimeException {
 
-    private final int mStatus;
+    private final HttpStatus mStatus;
 
-    public ApiFailure(int status, String message) {
+    public ApiFailure(HttpStatus status, String message) {
         super(message);
         mStatus = status;
     }
 
-    public int getStatus() {
+    public HttpStatus getStatus() {
         return mStatus;
     }
 }

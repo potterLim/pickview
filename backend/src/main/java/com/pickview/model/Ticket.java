@@ -1,9 +1,7 @@
 package com.pickview.model;
 
-import com.pickview.domain.ETicketStatus;
-
 import com.pickview.domain.ETicketKind;
-
+import com.pickview.domain.ETicketStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

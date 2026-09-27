@@ -4,5 +4,5 @@ public enum ESellerStatus {
     NONE,
     PENDING,
     APPROVED,
-    REJECTED
+    REJECTED,
 }
